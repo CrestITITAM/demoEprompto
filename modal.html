@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+</head>
+<style type="text/css">
+	.close{
+		  background-color: #555555;
+		  border: none;
+		  color: white;
+		  padding: 15px 32px;
+		  margin-left: 30%;
+		  text-align: center;
+		  text-decoration: none;
+		  display: inline-block;
+		  font-size: 16px;
+	}
+</style>
+<body>
+<div>
+  
+  <div id="myModal">
+    <p><input type="checkbox" class="form-check-input" id="is_policy_check" name="is_policy_check" style="width: 15px;margin-left: 0px;" onclick="IsChecked()"><b style="padding-bottom: 25px;"> Accept Privacy Policy</b><br>We use cookies to enhance the experience, to display customized content in accordance with your browser settings, and to help us better understand how you use our website. To read about how we use cookies and how you can control them <a href="#" onclick="openPolicy()">here</a>. If you continue to use this site, you consent to our use of cookies..</p>
+  </div>
+ 
+</div>
+</body>
+<script>
+	const remote = require('electron').remote;
+	const {ipcRenderer} = require('electron');
+	const client_id = remote.getGlobal('clientID');
+
+	document.getElementById("close-btn").addEventListener("click", function (e) {
+       var window = remote.getCurrentWindow();
+       window.close();
+    });
+
+	function IsChecked(){ 
+		const input_values = {
+			clientID: client_id
+		};
+        ipcRenderer.send('update_is_itam_policy',input_values);
+        var window = remote.getCurrentWindow();
+        window.close();
+	}
+
+	function openPolicy(){
+		window.open('policy.html', '_blank');
+	}
+	// href="policy.html" 
+</script>
+</html>
