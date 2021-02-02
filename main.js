@@ -159,6 +159,9 @@ app.on('ready',function(){
         });
         autoLaunch.isEnabled().then((isEnabled) => {
           if (!isEnabled) autoLaunch.enable();
+          autoUpdater.on('update-available', () => {
+            autoUpdater.quitAndInstall();
+          });
         });
 
 
