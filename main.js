@@ -45,8 +45,8 @@ const Tray = electron.Tray;
 const iconPath = path.join(__dirname,'images/ePrompto_png.png');
 
 //global.root_url = 'https://www.eprompto.com/itam_backend_end_user';
-//global.root_url = 'https://developer.eprompto.com/itam_backend_end_user';
-global.root_url = 'http://localhost/end_user_backend';
+global.root_url = 'https://developer.eprompto.com/itam_backend_end_user';
+//global.root_url = 'http://localhost/end_user_backend';
 
 let reqPath = path.join(app.getAppPath(), '../');
 const detail =  reqPath+"syskey.txt";
