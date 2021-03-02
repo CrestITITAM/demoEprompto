@@ -91,7 +91,7 @@ app.on('ready',function(){
     log.transports.file.stream = fs.createWriteStream(log.transports.file.file, log.transports.file.streamConfig);
     log.transports.console.level = 'debug';
     
-        session.defaultSession.cookies.get({ url: 'http://www.eprompto.com' })
+      session.defaultSession.cookies.get({ url: 'http://www.eprompto.com' })
         .then((cookies) => {
           if(cookies.length == 0){
             if(fs.existsSync(detail)){
@@ -169,22 +169,16 @@ app.on('ready',function(){
       now_datetime = now_datetime.toLocaleString('en-US', options);
       var only_date = now_datetime.split(", ");
 
-        fs.writeFile(time_file, now_datetime, function (err) { 
+      fs.writeFile(time_file, now_datetime, function (err) { 
         if (err) return console.log(err);
       });
 
-        setGlobalVariable();
+      setGlobalVariable();
+
       // session.defaultSession.clearStorageData([], function (data) {
       //     console.log(data);
       // })
   }); 
-
-// autoUpdater.setFeedURL({
-//   provider: 'github',
-//   owner: 'CrestITITAM',
-//   repo: 'DemoEpromptoPrivate',
-//   token: '52918596c8835c8e2ebb6806a63ef1f171fc489d',
-// });
 
 app.commandLine.appendSwitch('disable-http2');
 autoUpdater.requestHeaders = {'Cache-Control' : 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0'};
@@ -421,28 +415,34 @@ function readCSVFile(filepath,system_key){
 
 var getEventIds = function(logname,asset_id,callback) { 
   var events = '';
-  request({
-    uri: root_url+"/security.php",
-    method: "POST",
-    form: {
-      funcType: 'getEventId',
-      lognametype: logname,
-      asset_id: asset_id
-    }
-  }, function(error, response, body) {  
-    if(body != '' || body != null || body != []){
-      output = JSON.parse(body); 
-      if(output.status == 'valid'){
-        if(output.result.length > 0){
-            for (var i = 0; i < output.result.length-1 ; i++) {
-              events = events + output.result[i]+',';
-            }
-            events = events + output.result[output.result.length-1];
-          }
-           callback(events);
+  // require('dns').resolve('www.google.com', function(err) {
+  //   if (err) {
+  //      console.log("No connection");
+  //   } else {
+       request({
+        uri: root_url+"/security.php",
+        method: "POST",
+        form: {
+          funcType: 'getEventId',
+          lognametype: logname,
+          asset_id: asset_id
         }
-      }
-  });
+      }, function(error, response, body) {  
+        if(body != '' || body != null || body != []){
+          output = JSON.parse(body); 
+          if(output.status == 'valid'){
+            if(output.result.length > 0){
+                for (var i = 0; i < output.result.length-1 ; i++) {
+                  events = events + output.result[i]+',';
+                }
+                events = events + output.result[output.result.length-1];
+              }
+               callback(events);
+            }
+          }
+      });
+  //   }
+  // });
 }
 
 function SetCron(sysKey){
@@ -523,14 +523,15 @@ function setGlobalVariable(){
               funcType: 'openFunc',
               sys_key: cookies[0].name
             }
-          }, function(error, response, body) { 
+          }, function(error, response, body) {
             if(error){
               log.info('Error while fetching global data '+error);
                            
             }else{
               console.log('CONNECTED');
+              //console.log(body);
               if(body != '' || body != ' ' || body != null){ 
-                output = JSON.parse(body);
+                output = JSON.parse(body); 
                 if(output.status == 'valid'){
                     asset_id = output.result[0];
                     client_id = output.result[1];
@@ -538,7 +539,7 @@ function setGlobalVariable(){
                     global.NetworkStatus = 'Yes';
                     global.downloadURL = __dirname;
                     global.assetID = asset_id;
-                    global.deviceID = output.result[2];
+                    global.deviceID = output.result[3];
                     global.userName = output.loginPass[0];
                     global.loginid = output.loginPass[1];
                     global.sysKey = cookies[0].name;
@@ -1127,7 +1128,7 @@ function updateAsset(asset_id){
         sys_model = data.model;
         device_name = os.hostname();
         cpuCount = os.cpus().length;
-        itam_version = app.getVersion();
+        //itam_version = app.getVersion();
       serialNumber(function (err, value) {
           request({
           uri: root_url+"/asset.php",
@@ -1139,8 +1140,7 @@ function updateAsset(asset_id){
             model: sys_model,
             serial_num: value,
             device_name: device_name,
-            cpu_count: cpuCount,
-            version: itam_version
+            cpu_count: cpuCount
           }
         }, function(error, response, body) { 
           if(error){
