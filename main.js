@@ -26,20 +26,20 @@ const shell = require('node-powershell');
 const { spawn } = require('child_process');
 const child_process = require('child_process');
 
-let ps = new shell({
-  executionPolicy: 'Bypass',
-  noProfile: true
-});
+// let ps = new shell({
+//   executionPolicy: 'Bypass',
+//   noProfile: true
+// });
 
-let sys_ps = new shell({
-  executionPolicy: 'Bypass',
-  noProfile: true
-});
+// let sys_ps = new shell({
+//   executionPolicy: 'Bypass',
+//   noProfile: true
+// });
 
-let app_ps = new shell({
-  executionPolicy: 'Bypass',
-  noProfile: true
-});
+// let app_ps = new shell({
+//   executionPolicy: 'Bypass',
+//   noProfile: true
+// });
 
 const Tray = electron.Tray;
 const iconPath = path.join(__dirname,'images/ePrompto_png.png');
@@ -129,28 +129,27 @@ app.on('ready',function(){
 
           SetCron(cookies[0].name);
           
-          fs.access("C:/ITAMEssential", function(error) {
-            if (error) {
-              fs.mkdir("C:/ITAMEssential", function(err) {
-                if (err) {
-                  console.log(err)
-                } else {
-                   fs.mkdir("C:/ITAMEssential/EventLogCSV", function(err) {
-                    if (err) {
-                      console.log(err)
-                    } else {
-                      checkforbatchfile();
-                    }
-                  })
-                }
-              })
-            } else {
-              checkforbatchfile();
-            }
-          })
+          // fs.access("C:/ITAMEssential", function(error) {
+          //   if (error) {
+          //     fs.mkdir("C:/ITAMEssential", function(err) {
+          //       if (err) {
+          //         console.log(err)
+          //       } else {
+          //          fs.mkdir("C:/ITAMEssential/EventLogCSV", function(err) {
+          //           if (err) {
+          //             console.log(err)
+          //           } else {
+          //             checkforbatchfile();
+          //           }
+          //         })
+          //       }
+          //     })
+          //   } else {
+          //     checkforbatchfile();
+          //   }
+          // })
 
           checkSecuritySelected(cookies[0].name);
-          //readSecurityCSVFile('C:\\ITAMEssential\\EventLogCSV\\securitylog.csv',cookies[0].name);
 
         }).catch((error) => {
           console.log(error)
@@ -183,30 +182,57 @@ app.on('ready',function(){
 app.commandLine.appendSwitch('disable-http2');
 autoUpdater.requestHeaders = {'Cache-Control' : 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0'};
 
+/* Security section */
 function checkSecuritySelected(system_key){
-  request({
-    uri: root_url+"/security.php",
-    method: "POST",
-    form: {
-      funcType: 'checkSecuritySelected',
-      sys_key: system_key
-    }
-  }, function(error, response, body) { 
-    if(error){
-      log.info('Error while checking security');
-    }else{
-      if(body != '' || body != null){
-        output = JSON.parse(body);
-        if(output.status == 'valid'){ 
-            var asset_id = output.asset_id;
-            fetchEventlogData(asset_id,system_key); 
+  require('dns').resolve('www.google.com', function(err) {
+    if (err) {
+       console.log("No connection");
+    } else {
+      request({
+        uri: root_url+"/security.php",
+        method: "POST",
+        form: {
+          funcType: 'checkSecuritySelected',
+          sys_key: system_key
         }
-      }
+      }, function(error, response, body) { 
+        if(error){
+          log.info('Error while checking security');
+        }else{
+          if(body != '' || body != null){
+            output = JSON.parse(body);
+            if(output.status == 'valid'){ 
+                var asset_id = output.asset_id;
+                var last_update = output.last_date;
+                  fs.access("C:/ITAMEssential", function(error) {
+                      if (error) {
+                        fs.mkdir("C:/ITAMEssential", function(err) {
+                          if (err) {
+                            console.log(err)
+                          } else {
+                             fs.mkdir("C:/ITAMEssential/EventLogCSV", function(err) {
+                              if (err) {
+                                console.log(err)
+                              } else {
+                                checkforbatchfile(last_update);
+                              }
+                            })
+                          }
+                        })
+                      } else {
+                        checkforbatchfile(last_update);
+                      }
+                  })
+                fetchEventlogData(asset_id,system_key); 
+            }
+          }
+        }
+      });
     }
   });
 }
 
-function checkforbatchfile(){
+function checkforbatchfile(last_update){
   const path1 = 'C:/ITAMEssential/logadmin.bat';
   const path2 = 'C:/ITAMEssential/execScript.bat';
   const path3 = 'C:/ITAMEssential/copy.ps1';
@@ -225,125 +251,128 @@ function checkforbatchfile(){
     });
   }
 
-  if (!fs.existsSync(path3)) {
-    fs.writeFile(path3, 'Get-EventLog -LogName Security -After ([datetime]::Today) | Export-Csv -Path C:\\ITAMEssential\\EventLogCSV\\securitylog.csv', function (err) {
-      if (err) throw err;
-      console.log('File3 is created successfully.');
-    });
-  }
+  var command = '$aDateTime = [dateTime]"'+last_update+'"'+'\n'+'Get-EventLog -LogName Security -After ($aDateTime) -Before (Get-Date)  | Export-Csv -Path C:\\ITAMEssential\\EventLogCSV\\securitylog.csv'
+  fs.writeFile(path3, command, function (err) {
+    if (err) throw err;
+    console.log('File3 is created successfully.');
+  });
+  // if (!fs.existsSync(path3)) {
+  //   fs.writeFile(path3, 'Get-EventLog -LogName Security -After ([datetime]::Today) | Export-Csv -Path C:\\ITAMEssential\\EventLogCSV\\securitylog.csv', function (err) {
+  //     if (err) throw err;
+  //     console.log('File3 is created successfully.');
+  //   });
+  // }
   
 }
 
 function fetchEventlogData(assetid,system_key){
 
-  request({
-    uri: root_url+"/security.php",
-    method: "POST",
-    form: {
-      funcType: 'getSecurityCrontime',
-      sys_key: system_key
-    }
-  }, function(error, response, body) {
-    if(error){
-      log.info('Error while checking security');
-    }else{
-      if(body != '' || body != null){ 
-        output = JSON.parse(body); 
-        if(output.status == 'valid'){
-          security_crontime_array = output.result; 
-          security_crontime_array.forEach(function(slot){ 
-             cron.schedule("0 "+slot[1]+" "+slot[0]+" * * *", function() { 
-                session.defaultSession.cookies.get({ url: 'http://www.eprompto.com' })
-                  .then((cookies) => {
-                    if(cookies.length > 0){
+  require('dns').resolve('www.google.com', function(err) {  
+    if (err) {  
+       console.log("No connection");  
+    } else {
+       request({
+        uri: root_url+"/security.php",
+        method: "POST",
+        form: {
+          funcType: 'getSecurityCrontime',
+          sys_key: system_key
+        }
+      }, function(error, response, body) {
+        if(error){
+          log.info('Error while checking security');
+        }else{
+          if(body != '' || body != null){ 
+            output = JSON.parse(body); 
+            if(output.status == 'valid'){
+              security_crontime_array = output.result; 
+              security_crontime_array.forEach(function(slot){ 
+                 cron.schedule("0 "+slot[1]+" "+slot[0]+" * * *", function() { 
+                    session.defaultSession.cookies.get({ url: 'http://www.eprompto.com' })
+                      .then((cookies) => {
+                        if(cookies.length > 0){
 
-                       child_process.exec('C:\\ITAMEssential\\logadmin', function(error, stdout, stderr) {
-                            console.log(stdout);
-                        });
-                    
-                      getEventIds('System',assetid,function(events){
-                        var command = 'Get-EventLog -LogName System -InstanceId '+events+' -After ([datetime]::Today)| Export-Csv -Path C:\\ITAMEssential\\EventLogCSV\\systemlog.csv';
-                        sys_ps.addCommand(command)
-                        sys_ps.invoke().then(output => {
-                          console.log(output);
-                        }).catch(err => {
-                          console.log(err);
-                          sys_ps.dispose();
-                        });
-                      });
+                           child_process.exec('C:\\ITAMEssential\\logadmin', function(error, stdout, stderr) {
+                                console.log(stdout);
+                            });
+                        
+                          getEventIds('System',assetid,function(events){
+                            var command = 'Get-EventLog -LogName System -InstanceId '+events+' -After ([datetime]::Today)| Export-Csv -Path C:\\ITAMEssential\\EventLogCSV\\systemlog.csv';
+                            exec(command, {'shell':'powershell.exe'}, (error, stdout, stderr)=> {
+                                console.log(stdout);
+                            })
+                          });
 
-                      getEventIds('Application',assetid,function(events){
-                        var command = 'Get-EventLog -LogName Application -InstanceId '+events+' -After ([datetime]::Today)| Export-Csv -Path C:\\ITAMEssential\\EventLogCSV\\applog.csv';
-                        app_ps.addCommand(command)
-                        app_ps.invoke().then(output => {
-                          console.log(output);
-                        }).catch(err => {
-                          console.log(err);
-                          app_ps.dispose();
-                        });
-                      });
-                    }
-                  }).catch((error) => {
-                    console.log(error)
-                  })
-                 }, {
-                   scheduled: true,
-                   timezone: "Asia/Kolkata" 
+                          getEventIds('Application',assetid,function(events){
+                            var command = 'Get-EventLog -LogName Application -InstanceId '+events+' -After ([datetime]::Today)| Export-Csv -Path C:\\ITAMEssential\\EventLogCSV\\applog.csv';
+                            exec(command, {'shell':'powershell.exe'}, (error, stdout, stderr)=> {
+                                console.log(stdout);
+                            })
+                          });
+                        }
+                      }).catch((error) => {
+                        console.log(error)
+                      })
+                     }, {
+                       scheduled: true,
+                       timezone: "Asia/Kolkata" 
+                  });
+                 
+
+                  var minute = Number(slot[1])+Number(4); 
+                  if(minute > 59){
+                    slot[0] = Number(slot[0])+Number(1);
+                    minute = Number(minute) - Number(60);
+                  }
+
+                  cron.schedule("0 "+minute+" "+slot[0]+" * * *", function() { 
+                    session.defaultSession.cookies.get({ url: 'http://www.eprompto.com' })
+                      .then((cookies) => {
+                        if(cookies.length > 0){
+                          //read from csv
+                          //cron.schedule("0 */5 "+slot[0]+" * * *", function() { 
+                            try {
+                              if (fs.existsSync('C:/ITAMEssential/EventLogCSV/securitylog.csv')) {
+                                readSecurityCSVFile('C:\\ITAMEssential\\EventLogCSV\\securitylog.csv',system_key);
+                              }
+                            } catch(err) {
+                              console.error(err)
+                            }
+
+                            try {
+                              if (fs.existsSync('C:/ITAMEssential/EventLogCSV/systemlog.csv')) {
+                                readCSVFile('C:\\ITAMEssential\\EventLogCSV\\systemlog.csv',system_key);
+                              }
+                            } catch(err) {
+                              console.error(err)
+                            }
+
+                            try {
+                              if (fs.existsSync('C:/ITAMEssential/EventLogCSV/applog.csv')) {
+                                readCSVFile('C:\\ITAMEssential\\EventLogCSV\\applog.csv',system_key);
+                              }
+                            } catch(err) {
+                              console.error(err)
+                            }
+
+                          // }, {
+                          //      scheduled: true,
+                          //      timezone: "Asia/Kolkata" 
+                          // });
+                        }
+                      }).catch((error) => {
+                        console.log(error)
+                      })
+                     }, {
+                       scheduled: true,
+                       timezone: "Asia/Kolkata" 
+                  });
               });
-             
-
-              var minute = Number(slot[1])+Number(2); 
-              if(minute > 59){
-                slot[0] = Number(slot[0])+Number(1);
-                minute = Number(minute) - Number(60);
-              }
-
-              cron.schedule("0 "+minute+" "+slot[0]+" * * *", function() { 
-                session.defaultSession.cookies.get({ url: 'http://www.eprompto.com' })
-                  .then((cookies) => {
-                    if(cookies.length > 0){
-                      //read from csv
-                      //cron.schedule("0 */5 "+slot[0]+" * * *", function() { 
-                        try {
-                          if (fs.existsSync('C:/ITAMEssential/EventLogCSV/securitylog.csv')) {
-                            readSecurityCSVFile('C:\\ITAMEssential\\EventLogCSV\\securitylog.csv',system_key);
-                          }
-                        } catch(err) {
-                          console.error(err)
-                        }
-
-                        try {
-                          if (fs.existsSync('C:/ITAMEssential/EventLogCSV/systemlog.csv')) {
-                            readCSVFile('C:\\ITAMEssential\\EventLogCSV\\systemlog.csv',system_key);
-                          }
-                        } catch(err) {
-                          console.error(err)
-                        }
-
-                        try {
-                          if (fs.existsSync('C:/ITAMEssential/EventLogCSV/applog.csv')) {
-                            readCSVFile('C:\\ITAMEssential\\EventLogCSV\\applog.csv',system_key);
-                          }
-                        } catch(err) {
-                          console.error(err)
-                        }
-
-                      // }, {
-                      //      scheduled: true,
-                      //      timezone: "Asia/Kolkata" 
-                      // });
-                    }
-                  }).catch((error) => {
-                    console.log(error)
-                  })
-                 }, {
-                   scheduled: true,
-                   timezone: "Asia/Kolkata" 
-              });
-          });
-        } 
-        
-      }
+            } 
+            
+          }
+        }
+      });
     }
   });
 }
@@ -359,8 +388,8 @@ function readSecurityCSVFile(filepath,system_key){
         if(json != []){
            for (j = 1; j < json.length; j++) { 
               // if(json[j]['field12'] == 'Security' ){ 
-                if(final_arr.indexOf(json[j]['field11']) == -1){ //to avoid duplicate entry into the array
-                    final_arr.push(json[j]['field11']);
+                if(final_arr.indexOf(json[j]['field11']) == -1 && final_arr.indexOf(json[j]['field12']) == -1 ){ //to avoid duplicate entry into the array
+                    final_arr.push(json[j]['field11'],json[j]['field12']);
                     new_Arr = [json[j]['field11'],json[j]['field12']];
                     ultimate.push(new_Arr);
                 }
@@ -1128,7 +1157,7 @@ function updateAsset(asset_id){
         sys_model = data.model;
         device_name = os.hostname();
         cpuCount = os.cpus().length;
-        //itam_version = app.getVersion();
+        itam_version = app.getVersion();
       serialNumber(function (err, value) {
           request({
           uri: root_url+"/asset.php",
@@ -1140,7 +1169,8 @@ function updateAsset(asset_id){
             model: sys_model,
             serial_num: value,
             device_name: device_name,
-            cpu_count: cpuCount
+            cpu_count: cpuCount,
+            version: itam_version
           }
         }, function(error, response, body) { 
           if(error){
@@ -1194,7 +1224,7 @@ var getAntivirus = function(callback) {
               is_name = 'yes';
             }
             if(parts[0].trim() == 'displayName' || parts[0].trim() == 'timestamp' || parts[0].trim() == 'productState'){
-                final_list += parts[0].trim()+':'+parts[1]+' / ';
+                final_list += parts[0].trim()+':'+parts[1]+' <br> ';
             }
            }
            if(is_name == 'yes'){
