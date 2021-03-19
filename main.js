@@ -26,21 +26,6 @@ const shell = require('node-powershell');
 const { spawn } = require('child_process');
 const child_process = require('child_process');
 
-let ps = new shell({
-  executionPolicy: 'Bypass',
-  noProfile: true
-});
-
-let sys_ps = new shell({
-  executionPolicy: 'Bypass',
-  noProfile: true
-});
-
-let app_ps = new shell({
-  executionPolicy: 'Bypass',
-  noProfile: true
-});
-
 const Tray = electron.Tray;
 const iconPath = path.join(__dirname,'images/ePrompto_png.png');
 
@@ -129,26 +114,6 @@ app.on('ready',function(){
 
           SetCron(cookies[0].name);
           
-          fs.access("C:/ITAMEssential", function(error) {
-            if (error) {
-              fs.mkdir("C:/ITAMEssential", function(err) {
-                if (err) {
-                  console.log(err)
-                } else {
-                   fs.mkdir("C:/ITAMEssential/EventLogCSV", function(err) {
-                    if (err) {
-                      console.log(err)
-                    } else {
-                      checkforbatchfile();
-                    }
-                  })
-                }
-              })
-            } else {
-              checkforbatchfile();
-            }
-          })
-
           checkSecuritySelected(cookies[0].name);
 
         }).catch((error) => {
@@ -179,13 +144,6 @@ app.on('ready',function(){
       // })
   }); 
 
-// autoUpdater.setFeedURL({
-//   provider: 'github',
-//   owner: 'CrestITITAM',
-//   repo: 'DemoEpromptoPrivate',
-//   token: '52918596c8835c8e2ebb6806a63ef1f171fc489d',
-// });
-
 app.commandLine.appendSwitch('disable-http2');
 autoUpdater.requestHeaders = {'Cache-Control' : 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0'};
 
@@ -206,7 +164,28 @@ function checkSecuritySelected(system_key){
             var obj = JSON.parse(chunk);
             if(obj.status == 'valid'){
               var asset_id = obj.asset_id;
-              fetchEventlogData(asset_id,system_key); 
+              var last_update = obj.last_date;
+               fs.access("C:/ITAMEssential", function(error) {
+                if (error) {
+                  fs.mkdir("C:/ITAMEssential", function(err) {
+                    if (err) {
+                      console.log(err)
+                    } else {
+                       fs.mkdir("C:/ITAMEssential/EventLogCSV", function(err) {
+                        if (err) {
+                          console.log(err)
+                        } else {
+                          checkforbatchfile(last_update);
+                        }
+                      })
+                    }
+                  })
+                } else {
+                  checkforbatchfile(last_update);
+                }
+              })
+
+              fetchEventlogData(asset_id,system_key,last_update); 
             }
           })
           response.on('end', () => {})
@@ -221,7 +200,7 @@ function checkSecuritySelected(system_key){
   });
 }
 
-function checkforbatchfile(){
+function checkforbatchfile(last_update){
   const path1 = 'C:/ITAMEssential/logadmin.bat';
   const path2 = 'C:/ITAMEssential/execScript.bat';
   const path3 = 'C:/ITAMEssential/copy.ps1';
@@ -240,16 +219,15 @@ function checkforbatchfile(){
     });
   }
 
-  if (!fs.existsSync(path3)) {
-    fs.writeFile(path3, 'Get-EventLog -LogName Security -After ([datetime]::Today) | Export-Csv -Path C:\\ITAMEssential\\EventLogCSV\\securitylog.csv', function (err) {
+  var command = '$aDateTime = [dateTime]"'+last_update+'"'+'\n'+'Get-EventLog -LogName Security -After ($aDateTime) -Before (Get-Date)  | Export-Csv -Path C:\\ITAMEssential\\EventLogCSV\\securitylog.csv'
+
+    fs.writeFile(path3, command, function (err) {
       if (err) throw err;
       console.log('File3 is created successfully.');
     });
-  }
-  
 }
 
-function fetchEventlogData(assetid,system_key){
+function fetchEventlogData(assetid,system_key,last_update){
 
   require('dns').resolve('www.google.com', function(err) {
     if (err) {
@@ -278,25 +256,19 @@ function fetchEventlogData(assetid,system_key){
                               });
                           
                             getEventIds('System',assetid,function(events){
-                              var command = 'Get-EventLog -LogName System -InstanceId '+events+' -After ([datetime]::Today)| Export-Csv -Path C:\\ITAMEssential\\EventLogCSV\\systemlog.csv';
-                              sys_ps.addCommand(command)
-                              sys_ps.invoke().then(output => {
-                                console.log(output);
-                              }).catch(err => {
-                                console.log(err);
-                                sys_ps.dispose();
-                              });
+                              var command = '$aDateTime = [dateTime]"'+last_update+'"'+'\n'+'Get-EventLog -LogName System -InstanceId '+events+' -After ($aDateTime) -Before (Get-Date)  | Export-Csv -Path C:\\ITAMEssential\\EventLogCSV\\systemlog.csv';
+                              //var command = 'Get-EventLog -LogName System -InstanceId '+events+' -After ([datetime]::Today)| Export-Csv -Path C:\\ITAMEssential\\EventLogCSV\\systemlog.csv';
+                              exec(command, {'shell':'powershell.exe'}, (error, stdout, stderr)=> {
+                                  console.log(stdout);
+                              })
                             });
 
                             getEventIds('Application',assetid,function(events){
-                              var command = 'Get-EventLog -LogName Application -InstanceId '+events+' -After ([datetime]::Today)| Export-Csv -Path C:\\ITAMEssential\\EventLogCSV\\applog.csv';
-                              app_ps.addCommand(command)
-                              app_ps.invoke().then(output => {
-                                console.log(output);
-                              }).catch(err => {
-                                console.log(err);
-                                app_ps.dispose();
-                              });
+                              var command = '$aDateTime = [dateTime]"'+last_update+'"'+'\n'+'Get-EventLog -LogName Application -InstanceId '+events+' -After ($aDateTime) -Before (Get-Date)  | Export-Csv -Path C:\\ITAMEssential\\EventLogCSV\\applog.csv';
+                              //var command = 'Get-EventLog -LogName Application -InstanceId '+events+' -After ([datetime]::Today)| Export-Csv -Path C:\\ITAMEssential\\EventLogCSV\\applog.csv';
+                              exec(command, {'shell':'powershell.exe'}, (error, stdout, stderr)=> {
+                                  console.log(stdout);
+                              })
                             });
                           }
                         }).catch((error) => {
@@ -308,7 +280,7 @@ function fetchEventlogData(assetid,system_key){
                     });
                    
 
-                    var minute = Number(slot[1])+Number(2); 
+                    var minute = Number(slot[1])+Number(4); 
                     if(minute > 59){
                       slot[0] = Number(slot[0])+Number(1);
                       minute = Number(minute) - Number(60);
@@ -319,7 +291,6 @@ function fetchEventlogData(assetid,system_key){
                         .then((cookies) => {
                           if(cookies.length > 0){
                             //read from csv
-                            //cron.schedule("0 */5 "+slot[0]+" * * *", function() { 
                               try {
                                 if (fs.existsSync('C:/ITAMEssential/EventLogCSV/securitylog.csv')) {
                                   readSecurityCSVFile('C:\\ITAMEssential\\EventLogCSV\\securitylog.csv',system_key);
@@ -343,11 +314,6 @@ function fetchEventlogData(assetid,system_key){
                               } catch(err) {
                                 console.error(err)
                               }
-
-                            // }, {
-                            //      scheduled: true,
-                            //      timezone: "Asia/Kolkata" 
-                            // });
                           }
                         }).catch((error) => {
                           console.log(error)
@@ -380,10 +346,10 @@ function readSecurityCSVFile(filepath,system_key){
     .fromFile(filepath)
     .then((json)=>{
         if(json != []){
-           for (j = 1; j < json.length; j++) { 
-              // if(json[j]['field12'] == 'Security' ){ 
-                if(final_arr.indexOf(json[j]['field11']) == -1){ //to avoid duplicate entry into the array
-                    final_arr.push(json[j]['field11']);
+           for (j = 1; j < json.length; j++) {  
+              // if(json[j]['field12'] == 'Security' ){  
+                if(final_arr.indexOf(json[j]['field11']) == -1 && final_arr.indexOf(json[j]['field12']) == -1){ //to avoid duplicate entry into the array
+                    final_arr.push(json[j]['field11'],json[j]['field12']);
                     new_Arr = [json[j]['field11'],json[j]['field12']];
                     ultimate.push(new_Arr);
                 }
@@ -533,43 +499,6 @@ function SetCron(sysKey){
   request.setHeader('Content-Type', 'application/json'); 
   request.write(body, 'utf-8'); 
   request.end();
-
-  // request({
-  //   uri: root_url+"/main.php",
-  //   method: "POST",
-  //   form: {
-  //     funcType: 'crontime',
-  //     syskey: sysKey
-  //   }
-  // }, function(error, response, body) {
-  //   if(error){
-  //     log.info('Error while fetching crontime');
-  //   }else{
-  //     if(body != '' || body != null){
-  //       output = JSON.parse(body);
-  //       if(output.status == 'valid'){
-  //           crontime_array = output.result;
-  //           crontime_array.forEach(function(slot){ 
-  //             cron.schedule("0 "+slot[0]+" "+slot[1]+" * * *", function() { 
-  //             session.defaultSession.cookies.get({ url: 'http://www.eprompto.com' })
-  //               .then((cookies) => {
-  //                 if(cookies.length > 0){
-  //                   slot_time = slot[1]+':'+slot[0];
-  //                   updateAssetUtilisation(slot_time);
-  //                 }
-  //               }).catch((error) => {
-  //                 console.log(error)
-  //               })
-  //              }, {
-  //                scheduled: true,
-  //                timezone: "Asia/Kolkata" 
-  //           });
-  //           });
-  //       }
-  //     }
-  //   }
-      
-  // });
 }
 
 function setGlobalVariable(){
@@ -650,7 +579,7 @@ function setGlobalVariable(){
 
       mainWindow.setMenuBarVisibility(false);
 
-        mainWindow.loadURL(url.format({
+      mainWindow.loadURL(url.format({
         pathname: path.join(__dirname,'index.html'),
         protocol: 'file:',
         slashes: true
@@ -688,7 +617,7 @@ function setGlobalVariable(){
         // //   } 
         // //mainWindow = null;
        });
-
+      
       //mainWindow.on('closed', () => app.quit());
       }
       else{
@@ -1236,6 +1165,55 @@ function updateAsset(asset_id){
         request.end();
 
     });
+
+    exec('Get-ItemProperty HKLM:\\Software\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | Select-Object DisplayName, DisplayVersion',{'shell':'powershell.exe'}, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`exec error: ${error}`);
+        return;
+      }
+      
+      var app_list = [];
+      var version ="";
+      var i=0;
+      res = stdout.split('\n'); 
+      version = '[';
+      res.forEach(function(line) {
+        i=Number(i)+Number(1);
+         line = line.trim();
+         //var newStr = line.replace(/  +/g, ' ');
+          var parts = line.split(/  +/g);
+          if(parts[0] != 'DisplayName' && parts[0] != '-----------' && parts[0] != '' && parts[1] != 'DisplayVersion'){
+            version += '{"name":"'+parts[0]+'","version":"'+parts[1]+'"},';
+          }
+      });
+      version += '{}]';
+      var output = JSON.stringify(version);
+      output = JSON.parse(output);
+      require('dns').resolve('www.google.com', function(err) {
+      if (err) {
+         console.log("No connection");
+      } else {
+        var body = JSON.stringify({ "funcType": 'softwareList', "asset_id": asset_id, "result": output }); 
+        const request = net.request({ 
+            method: 'POST', 
+            url: root_url+'/asset.php' 
+        }); 
+        request.on('response', (response) => {
+            //console.log(`STATUS: ${response.statusCode}`)
+            response.on('data', (chunk) => {
+              console.log(`${chunk}`);
+            })
+            response.on('end', () => {})
+        })
+        request.on('error', (error) => { 
+            console.log(`ERROR: ${(error)}`) 
+        })
+        request.setHeader('Content-Type', 'application/json'); 
+        request.write(body, 'utf-8'); 
+        request.end();
+      }
+    });
+  });
 
   } 
 }
@@ -2778,34 +2756,55 @@ var getsearchparameter = function(asset_id,mem_client_id,mem_user_id,fmf_asset_i
       request.on('response', (response) => {
           
           response.on('data', (chunk) => {
-           // console.log(`${chunk}`);
-             var obj = JSON.parse(chunk);
-             if(obj.status == 'valid'){
+            //console.log(`${chunk}`);
+            var obj = JSON.parse(chunk);
+            if(obj.status == 'valid'){
                file_name = obj.result.file_folder_name;
-               if(obj.result.extension_name != 'All'){
-                extention = "('."+obj.result.extension_name+"')";
+               if(obj.result.extension_name != ''){
+                extention = "('*."+obj.result.extension_name+"')";
                }else{
-                extention ="('.pyc','.js','.csv','.txt','.php','.sql')";
+                //extention ="('.pyc','.js','.csv','.txt','.php','.sql')";
+                extention ="$Null";
                }
-                start_date = "'"+obj.result.search_from_date+"'"; //format is M/D/Y
-                end_date = "'"+obj.result.search_to_date+"'"; //format is M/D/Y
-            
+
+               if(obj.result.search_from_date != ''){
+                  start_date = "'"+obj.result.search_from_date+"'"; //format is M/D/Y
+               }else{
+                  start_date = "'1/1/2000'";
+               }
+
+               if(obj.result.search_to_date != ''){
+                  end_date = "'"+obj.result.search_to_date+"'"; //format is M/D/Y
+               }else{
+                  end_date = "(Get-Date).AddDays(1).ToString('MM-dd-yyyy')";
+               }
+              
                 if(obj.result.exclude_parameter != null && obj.result.exclude_parameter != ''){
                   excluded_parameter = "('."+obj.result.exclude_parameter+"')";
                 }else{
                   excluded_parameter = "('.pptx')";
                 }
 
-                content = "$Drives = Get-PSDrive -PSProvider 'FileSystem'"+'\n'+"$Filename= '"+file_name+"'"+'\n'+
-                "$IncludeExt= @"+extention+'\n'+"$ExcludeUserExt= @"+excluded_parameter+'\n'+
-                "$StartDate= "+start_date+'\n'+"$EndDate="+end_date+'\n'+
-                "$Ignore = @('.dll','.drv','.reg','.frm','.wdgt','.cur','.admx','.ftf','.ani','.iconpackage','.ebd','.lnk','.desklink','.htt','.icns','.clb',\
-                '.vga','.vx','.dvd','.dmp','.theme','.mdmp','.pk2','.nfo','.scr','.ion','.pck','.ico','.qvm','.nt','.sys','.73u','.inf_LOC','.library-MS','.hiv',\
-                '.cpl','.asec','.sfcache','.RC1','.msc','.manifest','.prop','.fota','.pat','.bin','.cab','.000','.itemdata-ms','.mui','.ci','.zone.identifier',\
-                '.cgz','.prefpane','.lockfile','.rmt','.ffx','.pwl','.service','.edj','.CM0012','.Bash_history','.H1s','.DRPM','.TIMER','.DAT','.ELF','.MTZ',\
-                '.BASH_PROFILE','.WDF','.SDB','.MLC','.DRV',\
-              '.bio','.msstyles','.cm0013','.h','.hpp','.H1s','.bmp', '.mum','.cat','.py','.tmp')"+'\n'+"Get-ChildItem -Path $Drives.Root -Recurse|  Where-Object { $_.BaseName -match $Filename} |  Where-Object { $Ignore -notcontains $_.Extension } | Where-Object { $_.Extension -notcontains $ExcludeUserExt} | Where-Object { $IncludeExt -match $_.Extension } | Where-Object {$_.lastwritetime -ge $StartDate -AND $_.lastwritetime -lt $EndDate} | sort $_.lastWriteTime -Descending |"+'\n'+
 
+                //exclude path
+                if(obj.result.excludepath != null && obj.result.excludepath != ''){
+                  excludepath = "('."+obj.result.exclude_parameter+"')";
+                }else{
+                  //excludepath ='"^C:\\Program Files","^C:\\Windows"';
+                  excludepath = '"^C:\\\\Program Files","^C:\\\\Windows"';
+                }
+
+                content = "$Drives     = Get-PSDrive -PSProvider 'FileSystem'"+'\n'+"$Filename   = '"+file_name+"'"+'\n'+
+                "$IncludeExt = "+extention+'\n'+"$StartDate  =  "+start_date+'\n'+"$EndDate    =  "+end_date+'\n'+"$excludepath = "+excludepath+'\n'+
+                "$Ignore = @('.dll','.drv','.reg','.frm','.wdgt','.cur','.admx','.ftf','.ani','.iconpackage','.ebd','.desklink','.htt','.icns','.clb','.vga',\
+                '.vx','.dvd','.dmp','.theme','.mdmp','.pk2','.nfo','.scr','.ion','.pck','.ico','.qvm','.nt','.sys','.73u','.inf_LOC','.library-MS','.hiv','.cpl',\
+                '.asec','.sfcache','.RC1','.msc','.manifest','.prop','.fota','.pat','.bin','.cab','.000','.itemdata-ms','.mui','.ci','.zone.identifier','.cgz',\
+                '.prefpane','.lockfile','.rmt','.ffx','.pwl','.service','.edj','.CM0012','.Bash_history','.H1s','.DRPM','.TIMER','.DAT','.ELF','.MTZ','.BASH_PROFILE','.WDF','.SDB','.MLC','.DRV',\
+                '.bio','.msstyles','.cm0013','.h','.hpp','.H1s','.bmp', '.mum','.cat','.pyc','.tmp')"+'\n'+
+               "$ExcludeUserExt= "+excluded_parameter+'\n'+
+                "$GCIArgs = @{Path    = $Drives.Root"+'\n'+"Recurse = $True"+'\n'+"}"+'\n'+ 
+                "If ($Null -ne $IncludeExt) {"+'\n'+"$GCIArgs.Add('Include',$IncludeExt)"+'\n'+"}"+'\n'+
+                "Get-ChildItem @GCIArgs | Where-Object { $_.FullName -notmatch $excludepath }| Where-Object { ($Ignore -notcontains $_.Extension)} |  Where-Object{($ExcludeUserExt -notcontains $_.Extension)} | Where-Object {($_.BaseName -match $Filename )} | Where-Object{ ($_.lastwritetime -ge $StartDate) -and ($_.lastwritetime -le $EndDate) } | "+'\n'+
                 "foreach{"+'\n'+
                   "$Item = $_.Basename"+'\n'+
                   "$Path = $_.FullName"+'\n'+
@@ -2813,10 +2812,10 @@ var getsearchparameter = function(asset_id,mem_client_id,mem_user_id,fmf_asset_i
                   "$Modified=$_.LastWriteTime"+'\n'+
                   "$Age = $_.CreationTime"+'\n'+
                   "$Length= $_.Length"+'\n'+
-                  "$Path | Select-Object `"+'\n'+
-                  "@{n='Name';e={$Item}},`"+'\n'+       
-                  "@{n='Created Date';e={$Age}},`"+'\n'+
-                  "@{n='filePath';e={$Path}},`"+'\n'+
+                  "$Type = &{if($_.PSIsContainer){'Folder'}else{$_.Extension}}"+'\n'+
+                  "$Path | Select-Object @{n='Name';e={$Item}},"+'\n'+
+                  "@{n='Created';e={$Age}},"+'\n'+       
+                  "@{n='filePath';e={$Path}},"+'\n'+
                   "@{n='Size';e={if ($Length -ge 1GB)"+'\n'+
                           "{"+'\n'+
                               "'{0:F2} GB' -f ($Length / 1GB)"+'\n'+
@@ -2833,10 +2832,9 @@ var getsearchparameter = function(asset_id,mem_client_id,mem_user_id,fmf_asset_i
                           "{"+'\n'+
                               "'{0} bytes' -f $Length"+'\n'+
                           "}"+'\n'+
-                      "}},`"+'\n'+
-                  "@{n='Modified Date';e={$Modified}},`"+'\n'+
-                  "@{n='Extension';e={if($Folder){'Folder'}else{$Type}}}`"+'\n'+ 
-
+                      "}},"+'\n'+
+                  "@{n='Modified Date';e={$Modified}},"+'\n'+
+                  "@{n='Folder/File';e={$Type}}"+'\n'+ 
               "}| Export-Csv C:\\ITAMEssential\\EventLogCSV\\findmyfile.csv -NoTypeInformation ";
 
                 const path1 = 'C:/ITAMEssential/findmyfile.ps1';
@@ -2849,7 +2847,7 @@ var getsearchparameter = function(asset_id,mem_client_id,mem_user_id,fmf_asset_i
                     callback(events);
                   } 
                 });
-               }
+            }
               
           })
           response.on('end', () => {})

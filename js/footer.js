@@ -1,5 +1,5 @@
 const { ipcRenderer } = require('electron');
-var timer = 300000; //for every 5 min
+var timer = 3000; //for every 5 sec
 //var timer = 600000; //for every 10 min
 setInterval(function(){
 	const input_values = {};
