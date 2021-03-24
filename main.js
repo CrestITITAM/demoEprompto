@@ -30,12 +30,12 @@ const Tray = electron.Tray;
 const iconPath = path.join(__dirname,'images/ePrompto_png.png');
 
 //global.root_url = 'https://www.eprompto.com/itam_backend_end_user';
-global.root_url = 'https://developer.eprompto.com/itam_backend_end_user';
-//global.root_url = 'http://localhost/end_user_backend';
+//global.root_url = 'https://developer.eprompto.com/itam_backend_end_user';
+global.root_url = 'http://localhost/end_user_backend';
 
 let reqPath = path.join(app.getAppPath(), '../');
 const detail =  reqPath+"syskey.txt";
-var csvFilename = reqPath + 'utilise.csv';
+//var csvFilename = reqPath + 'utilise.csv';
 var time_file = reqPath + 'time_file.txt';
 
 let mainWindow;
@@ -66,7 +66,7 @@ app.on('ready',function(){
     if (!gotTheLock) {
       app.quit();
     }
-    
+    readFMFCSV(79);
     tray = new Tray(iconPath);
 
     log.transports.file.level = 'info';
@@ -112,9 +112,9 @@ app.on('ready',function(){
              
           }
 
-          SetCron(cookies[0].name);
+          SetCron(cookies[0].name); // to fetch utilisation
           
-          checkSecuritySelected(cookies[0].name);
+          checkSecuritySelected(cookies[0].name); //to fetch security detail
 
         }).catch((error) => {
           console.log(error)
@@ -2712,18 +2712,35 @@ ipcMain.on('checkfmfselected',function(e,form_data){
                 var obj = JSON.parse(chunk);
                 if(obj.status == 'valid'){
                   var asset_id = obj.result.asset_id;
+                  var search_type = obj.result.search_type;
+                  var scheduled_date_from = obj.result.scheduled_date_from;
+                  var scheduled_date_to = obj.result.scheduled_date_to;
                   var mem_client_id = obj.result.member_client_id;
                   var mem_user_id = obj.result.member_user_id;
+                  var today = obj.result.current_date;
                   global.fmf_asset_id = obj.result.fmf_asset_id;
                   var result = [];
-                  getsearchparameter(asset_id,mem_client_id,mem_user_id,fmf_asset_id,function(events){
-                    if(events == 'success'){
-                      console.log('hello created');
-                      result['response'] = 'success';
-                      result['fmf_asset_id'] = fmf_asset_id;
-                      e.reply('filecreated', result);
+                  if(search_type != 2){
+                    getsearchparameter(asset_id,mem_client_id,mem_user_id,fmf_asset_id,function(events){
+                      if(events == 'success'){
+                        console.log('hello created');
+                        result['response'] = 'success';
+                        result['fmf_asset_id'] = fmf_asset_id;
+                        e.reply('filecreated', result);
+                      }
+                    });
+                  }else{
+                    if(scheduled_date_from <= today && scheduled_date_to >= today){
+                      getsearchparameter(asset_id,mem_client_id,mem_user_id,fmf_asset_id,function(events){
+                        if(events == 'success'){
+                          console.log('hello created');
+                          result['response'] = 'success';
+                          result['fmf_asset_id'] = fmf_asset_id;
+                          e.reply('filecreated', result);
+                        }
+                      });
                     }
-                  });
+                  }
                 }
               })
               response.on('end', () => {})
@@ -2756,12 +2773,13 @@ var getsearchparameter = function(asset_id,mem_client_id,mem_user_id,fmf_asset_i
       request.on('response', (response) => {
           
           response.on('data', (chunk) => {
-            //console.log(`${chunk}`);
+           // console.log(`${chunk}`);
             var obj = JSON.parse(chunk);
             if(obj.status == 'valid'){
-               file_name = obj.result.file_folder_name;
+               file_name = obj.result.file_folder_name; 
                if(obj.result.extension_name != ''){
-                extention = "('*."+obj.result.extension_name+"')";
+                ///extention = "('*."+obj.result.extension_name+"')";
+                extention = obj.result.extension_name;
                }else{
                 //extention ="('.pyc','.js','.csv','.txt','.php','.sql')";
                 extention ="$Null";
@@ -2780,18 +2798,18 @@ var getsearchparameter = function(asset_id,mem_client_id,mem_user_id,fmf_asset_i
                }
               
                 if(obj.result.exclude_parameter != null && obj.result.exclude_parameter != ''){
-                  excluded_parameter = "('."+obj.result.exclude_parameter+"')";
+                  excluded_parameter = "("+obj.result.exclude_parameter+")";
                 }else{
-                  excluded_parameter = "('.pptx')";
+                  excluded_parameter = '';
                 }
-
 
                 //exclude path
                 if(obj.result.excludepath != null && obj.result.excludepath != ''){
-                  excludepath = "('."+obj.result.exclude_parameter+"')";
+                  //excludepath = "('."+obj.result.excludepath+"')";
+                  excludepath = obj.result.excludepath;
                 }else{
                   //excludepath ='"^C:\\Program Files","^C:\\Windows"';
-                  excludepath = '"^C:\\\\Program Files","^C:\\\\Windows"';
+                  excludepath = '';
                 }
 
                 content = "$Drives     = Get-PSDrive -PSProvider 'FileSystem'"+'\n'+"$Filename   = '"+file_name+"'"+'\n'+
@@ -2882,7 +2900,7 @@ function readFMFCSV(fmf_asset_id){
     .then((json)=>{
         if(json != []){ 
            for (j = 0; j < json.length; j++) { 
-              new_Arr = [json[j]['Name'],json[j]['Created Date'],json[j]['filePath'],json[j]['Size'],json[j]['Modified Date'],json[j]['Extension']];
+              new_Arr = [json[j]['Name'],json[j]['Created'],json[j]['filePath'],json[j]['Size'],json[j]['Modified Date'],json[j]['Folder/File']];
               ultimate.push(new_Arr);
            }
           
