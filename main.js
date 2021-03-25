@@ -26,12 +26,27 @@ const shell = require('node-powershell');
 const { spawn } = require('child_process');
 const child_process = require('child_process');
 
+// let ps = new shell({
+//   executionPolicy: 'Bypass',
+//   noProfile: true
+// });
+
+// let sys_ps = new shell({
+//   executionPolicy: 'Bypass',
+//   noProfile: true
+// });
+
+// let app_ps = new shell({
+//   executionPolicy: 'Bypass',
+//   noProfile: true
+// });
+
 const Tray = electron.Tray;
 const iconPath = path.join(__dirname,'images/ePrompto_png.png');
 
 //global.root_url = 'https://www.eprompto.com/itam_backend_end_user';
-global.root_url = 'https://developer.eprompto.com/itam_backend_end_user';
-//global.root_url = 'http://localhost/end_user_backend';
+//global.root_url = 'https://developer.eprompto.com/itam_backend_end_user';
+global.root_url = 'http://localhost/end_user_backend';
 
 let reqPath = path.join(app.getAppPath(), '../');
 const detail =  reqPath+"syskey.txt";
@@ -113,7 +128,7 @@ app.on('ready',function(){
           }
 
           SetCron(cookies[0].name);
-
+       
           checkSecuritySelected(cookies[0].name);
 
         }).catch((error) => {
@@ -221,6 +236,13 @@ function checkforbatchfile(last_update){
     if (err) throw err;
     console.log('File3 is created successfully.');
   });
+  // if (!fs.existsSync(path3)) {
+  //   fs.writeFile(path3, 'Get-EventLog -LogName Security -After ([datetime]::Today) | Export-Csv -Path C:\\ITAMEssential\\EventLogCSV\\securitylog.csv', function (err) {
+  //     if (err) throw err;
+  //     console.log('File3 is created successfully.');
+  //   });
+  // }
+  
 }
 
 function fetchEventlogData(assetid,system_key){
@@ -402,10 +424,10 @@ function readCSVFile(filepath,system_key){
 
 var getEventIds = function(logname,asset_id,callback) { 
   var events = '';
-  require('dns').resolve('www.google.com', function(err) {
-    if (err) {
-       console.log("No connection");
-    } else {
+  // require('dns').resolve('www.google.com', function(err) {
+  //   if (err) {
+  //      console.log("No connection");
+  //   } else {
        request({
         uri: root_url+"/security.php",
         method: "POST",
@@ -428,8 +450,8 @@ var getEventIds = function(logname,asset_id,callback) {
             }
           }
       });
-    }
-  });
+  //   }
+  // });
 }
 
 function SetCron(sysKey){
@@ -470,6 +492,16 @@ function SetCron(sysKey){
       
   });
 }
+
+// ipcMain.on('run_cmd', (event) => {
+//   ps.addCommand('Get-EventLog -LogName Security -Newest 5 >> D:\\Ashwini\\MyProjects\\securelog.txt')
+//   ps.invoke().then(output => {
+//     console.log(output);
+//   }).catch(err => {
+//     console.log(err);
+//     ps.dispose();
+//   });
+// });
 
 function setGlobalVariable(){
   tray.destroy();
@@ -617,6 +649,31 @@ function setGlobalVariable(){
       console.log(error)
     })    
 }
+
+// function setPassLogin(client_id){
+
+//  request({
+//    uri: root_url+"/check_clientno.php",
+//    method: "POST",
+//    form: {
+//      funcType: 'setPasslogin',
+//      clientID: client_id
+//    }
+//  }, function(error, response, body) {  
+//    if(error){
+//      log.info('Error while setting password '+error);
+                   
+//    }else{
+//      output = JSON.parse(body);
+//      if(output.status == 'valid'){ 
+//        global.userName = output.result[0];
+//          global.loginid = output.result[1];
+//      }
+//    }
+
+//  });
+// }
+
 
 function updateAssetUtilisation(slot){
   
@@ -1119,51 +1176,6 @@ function updateAsset(asset_id){
         });
     });
 
-    exec('wmic product get name,version', (error, stdout, stderr) => {
-        if (error) {
-          console.error(`exec error: ${error}`);
-          return;
-        }
-        
-        var app_list = [];
-        var version ="";
-        var i=0;
-        res = stdout.split('\n'); 
-        version = '[';
-        res.forEach(function(line) {
-          i=Number(i)+Number(1);
-           line = line.trim();
-           //var newStr = line.replace(/  +/g, ' ');
-            var parts = line.split(/  +/g);
-            if(parts[0] != 'Name' && parts[1] != 'Version'){
-              version += '{"name":"'+parts[0]+'","version":"'+parts[1]+'"},';
-            }
-        });
-        version += '{}]';
-        var output = JSON.stringify(version);
-        output = JSON.parse(output);
-        require('dns').resolve('www.google.com', function(err) {
-        if (err) {
-           console.log("No connection");
-        } else {
-          request({
-            uri: root_url+"/asset.php",
-            method: "POST",
-            form: {
-              funcType: 'softwareList',
-              asset_id: asset_id,
-              result : output
-            }
-          }, function(error, response, body) { 
-            if(error){
-              log.info('Error while updating systemInfo '+error);
-            }else{
-              console.log('saved');
-            }
-          });
-        }
-      });
-    });
   } 
 }
 
@@ -1678,11 +1690,51 @@ ipcMain.on('form_data',function(e,form_data){
           result['status'] = 1;
           result['ticketNo'] = ticketNo;
           e.reply('ticket_submit',result);
-          
+          // categoryWindow = new BrowserWindow({
+          //  width: 300,
+          //  height: 400,
+          //  icon: __dirname + '/images/ePrompto_png.png',
+          //  //frame: false,
+          //    x: width - 370,
+         //        y: 310,
+          //  webPreferences: {
+         //            nodeIntegration: true
+         //        }
+          // });
+
+          // categoryWindow.setMenuBarVisibility(false);
+
+          // categoryWindow.loadURL(url.format({
+          //  pathname: path.join(__dirname,'thankyou.html'),
+          //  protocol: 'file:',
+          //  slashes: true
+          // }));
+          // //categoryWindow.setMenu(null);
+          // mainWindow.close();
+          //   //ticketWindow.close();
         }else{
           result['status'] = 0;
           result['ticketNo'] = '';
           e.reply('ticket_submit',result);
+          // ticketIssue = new BrowserWindow({
+          //  width: 300,
+          //  height: 400,
+          //  icon: __dirname + '/images/ePrompto_png.png',
+          //  //frame: false,
+          //    x: width - 370,
+         //        y: 310,
+          //  webPreferences: {
+         //            nodeIntegration: true
+         //        }
+          // });
+
+          // ticketIssue.setMenuBarVisibility(false);
+
+          // ticketIssue.loadURL(url.format({
+          //  pathname: path.join(__dirname,'ticket.html'),
+          //  protocol: 'file:',
+          //  slashes: true
+          // }));
         }
       }
     });
