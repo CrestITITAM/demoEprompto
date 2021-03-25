@@ -435,10 +435,10 @@ function readCSVFile(filepath,system_key){
 
 var getEventIds = function(logname,asset_id,callback) { 
   var events = '';
-  // require('dns').resolve('www.google.com', function(err) {
-  //   if (err) {
-  //      console.log("No connection");
-  //   } else {
+  require('dns').resolve('www.google.com', function(err) {
+    if (err) {
+       console.log("No connection");
+    } else {
        request({
         uri: root_url+"/security.php",
         method: "POST",
@@ -461,8 +461,8 @@ var getEventIds = function(logname,asset_id,callback) {
             }
           }
       });
-  //   }
-  // });
+    }
+  });
 }
 
 function SetCron(sysKey){
