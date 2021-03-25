@@ -362,63 +362,74 @@ function readSecurityCSVFile(filepath,system_key){
    var final_arr=[];
    var new_Arr = [];
    var ultimate = [];
-   const converter=csv()
-    .fromFile(filepath)
-    .then((json)=>{
-        if(json != []){
-           for (j = 1; j < json.length; j++) { 
-              // if(json[j]['field12'] == 'Security' ){ 
+   require('dns').resolve('www.google.com', function(err) {  
+    if (err) {  
+       console.log("No connection");  
+    } else {
+      const converter=csv()
+      .fromFile(filepath)
+      .then((json)=>{
+          if(json != []){
+             for (j = 1; j < json.length; j++) { 
                 if(final_arr.indexOf(json[j]['field11']) == -1 && final_arr.indexOf(json[j]['field12']) == -1 ){ //to avoid duplicate entry into the array
                     final_arr.push(json[j]['field11'],json[j]['field12']);
                     new_Arr = [json[j]['field11'],json[j]['field12']];
                     ultimate.push(new_Arr);
                 }
-              //}
-           }
+             }
 
-           request({
-              uri: root_url+"/security.php",
-              method: "POST",
-              form: {
-                funcType: 'addsecuritywinevent',
-                sys_key: system_key,
-                events: ultimate
-              }
-            }, function(error, response, body) {
-              console.log(body);
-            });
-        }
-    })
+             request({
+                uri: root_url+"/security.php",
+                method: "POST",
+                form: {
+                  funcType: 'addsecuritywinevent',
+                  sys_key: system_key,
+                  events: ultimate
+                }
+              }, function(error, response, body) {
+                console.log(body);
+              });
+          }
+      })
+
+    }
+  })
 }
 
 function readCSVFile(filepath,system_key){
    var final_arr=[];
    var new_Arr = [];
    var ultimate = [];
-   const converter=csv()
-    .fromFile(filepath)
-    .then((json)=>{ 
-        if(json != []){ 
-           for (j = 1; j < json.length; j++) { 
-              if(final_arr.indexOf(json[j]['field11']) == -1){ //to avoid duplicate entry into the array
-                  final_arr.push(json[j]['field11']);
-                  new_Arr = [json[j]['field11'],json[j]['field12']];
-                  ultimate.push(new_Arr);
-              }
-           }
+   require('dns').resolve('www.google.com', function(err) {  
+      if (err) {  
+         console.log("No connection");  
+      } else {
+        const converter=csv()
+        .fromFile(filepath)
+        .then((json)=>{ 
+            if(json != []){ 
+               for (j = 1; j < json.length; j++) { 
+                  if(final_arr.indexOf(json[j]['field11']) == -1){ //to avoid duplicate entry into the array
+                      final_arr.push(json[j]['field11']);
+                      new_Arr = [json[j]['field11'],json[j]['field12']];
+                      ultimate.push(new_Arr);
+                  }
+               }
 
-           request({
-              uri: root_url+"/security.php",
-              method: "POST",
-              form: {
-                funcType: 'addwinevent',
-                sys_key: system_key,
-                events: ultimate
-              }
-            }, function(error, response, body) {
-              console.log(body);
-            });
-        }
+               request({
+                  uri: root_url+"/security.php",
+                  method: "POST",
+                  form: {
+                    funcType: 'addwinevent',
+                    sys_key: system_key,
+                    events: ultimate
+                  }
+                }, function(error, response, body) {
+                  console.log(body);
+                });
+            }
+        })
+      }
     })
 }
 
