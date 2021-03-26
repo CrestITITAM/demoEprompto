@@ -429,34 +429,40 @@ function readCSVFile(filepath,system_key){
 
 var getEventIds = function(logname,asset_id,callback) { 
   var events = '';
-  var body = JSON.stringify({ "funcType": 'getEventId', "lognametype": logname, "asset_id": asset_id }); 
-    const request = net.request({ 
-        method: 'POST', 
-        url: root_url+'/security.php' 
-    }); 
-    request.on('response', (response) => {
-        //console.log(`STATUS: ${response.statusCode}`)
-        response.on('data', (chunk) => {
-          //console.log(`${chunk}`);
-          var obj = JSON.parse(chunk);
-          if(obj.status == 'valid'){
-            if(obj.result.length > 0){
-              for (var i = 0; i < obj.result.length-1 ; i++) {
-                events = events + obj.result[i]+',';
+  require('dns').resolve('www.google.com', function(err) {
+    if (err) {
+       console.log("No connection");
+    } else {
+      var body = JSON.stringify({ "funcType": 'getEventId', "lognametype": logname, "asset_id": asset_id }); 
+      const request = net.request({ 
+          method: 'POST', 
+          url: root_url+'/security.php' 
+      }); 
+      request.on('response', (response) => {
+          //console.log(`STATUS: ${response.statusCode}`)
+          response.on('data', (chunk) => {
+            //console.log(`${chunk}`);
+            var obj = JSON.parse(chunk);
+            if(obj.status == 'valid'){
+              if(obj.result.length > 0){
+                for (var i = 0; i < obj.result.length-1 ; i++) {
+                  events = events + obj.result[i]+',';
+                }
+                events = events + obj.result[obj.result.length-1];
               }
-              events = events + obj.result[obj.result.length-1];
+              callback(events);
             }
-            callback(events);
-          }
-        })
-        response.on('end', () => {})
-    })
-    request.on('error', (error) => { 
-        console.log(`ERROR: ${(error)}`) 
-    })
-    request.setHeader('Content-Type', 'application/json'); 
-    request.write(body, 'utf-8'); 
-    request.end();
+          })
+          response.on('end', () => {})
+      })
+      request.on('error', (error) => { 
+          console.log(`ERROR: ${(error)}`) 
+      })
+      request.setHeader('Content-Type', 'application/json'); 
+      request.write(body, 'utf-8'); 
+      request.end();
+    }
+  });
 }
 
 function SetCron(sysKey){
