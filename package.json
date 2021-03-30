@@ -1,6 +1,6 @@
 {
   "name": "eprompto-ITAM",
-  "version": "2.0.19",
+  "version": "2.0.20",
   "description": "To AutoUpdate in ITAM",
   "main": "main.js",
   "scripts": {

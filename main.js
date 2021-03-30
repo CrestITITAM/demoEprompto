@@ -30,8 +30,8 @@ const Tray = electron.Tray;
 const iconPath = path.join(__dirname,'images/ePrompto_png.png');
 
 //global.root_url = 'https://www.eprompto.com/itam_backend_end_user';
-//global.root_url = 'https://developer.eprompto.com/itam_backend_end_user';
-global.root_url = 'http://localhost/end_user_backend';
+global.root_url = 'https://developer.eprompto.com/itam_backend_end_user';
+//global.root_url = 'http://localhost/end_user_backend';
 
 let reqPath = path.join(app.getAppPath(), '../');
 const detail =  reqPath+"syskey.txt";
@@ -66,7 +66,7 @@ app.on('ready',function(){
     if (!gotTheLock) {
       app.quit();
     }
-    readFMFCSV(79);
+    
     tray = new Tray(iconPath);
 
     log.transports.file.level = 'info';
@@ -689,12 +689,12 @@ function updateAssetUtilisation(slot){
     .then((cookies1) => {
 
       const disks = nodeDiskInfo.getDiskInfoSync();
-    total_mem = (os.totalmem()/(1024*1024*1024)).toFixed(1);
-    free_mem = (os.freemem()/(1024*1024*1024)).toFixed(1);
+    total_mem = (os.totalmem()/(1024*1024*1024)).toFixed(1); // total RAM
+    free_mem = (os.freemem()/(1024*1024*1024)).toFixed(1); // free RAM
       //tot_mem = (os.totalmem()/(1024*1024*1024)).toFixed(1);
       //utilised_RAM = tot_mem - free_mem; // in GB
     today = Math.floor(Date.now() / 1000);
-    utilised_RAM = (((total_mem - free_mem)/total_mem)*100).toFixed(1);
+    utilised_RAM = (((total_mem - free_mem)/total_mem)*100).toFixed(1); // % RAM used
 
     //used_mem = ((os.totalmem() - os.freemem())/(1024*1024*1024)).toFixed(1);
     hdd_total = hdd_used = 0;
@@ -704,7 +704,7 @@ function updateAssetUtilisation(slot){
            hdd_total = hdd_total + disk.blocks;
            hdd_used = hdd_used + disk.used;
            //free_drive = ((disk.available - disk.used)/(1024*1024*1024)).toFixed(2);
-           used_drive = (disk.used/(1024*1024*1024)).toFixed(2); 
+           used_drive = (disk.used/(1024*1024*1024)).toFixed(2); // disk used in GB
            hdd_name = hdd_name.concat(disk.mounted+' '+used_drive+' / ');
        }
           
@@ -715,14 +715,13 @@ function updateAssetUtilisation(slot){
 
     cpu.usage()
       .then(info => { 
-
+      // info is nothing but CPU utilisation in %
           if(info == 0){
-            info = 1;
+            info = 1; 
           }
           getAppUsedList(function(app_data){
             app_name_list = app_data; 
-            CallUpdateAssetApi(cookies1[0].name,todays_date,slot,info,utilised_RAM,hdd_used,ctr,active_user_name,app_name_list,utilised_RAM,info,hdd_used,total_mem,hdd_total,hdd_name,time_off);
-            
+            CallUpdateAssetApi(cookies1[0].name,todays_date,slot,info,utilised_RAM,hdd_used,ctr,active_user_name,app_name_list,utilised_RAM,info,hdd_used,total_mem,hdd_total,hdd_name,time_off);           
           });
     })
   }).catch((error) => {
@@ -1049,23 +1048,40 @@ function updateAsset(asset_id){
 
         os_data = os_name+' '+os_OEM+' '+os_bit_type+' '+os_version;
 
-        var body = JSON.stringify({ "funcType": 'osInfo', "asset_id": asset_id, "version" : os_data }); 
-        const request = net.request({ 
-            method: 'POST', 
-            url: root_url+'/asset.php' 
-        }); 
-        request.on('response', (response) => {
-            //console.log(`STATUS: ${response.statusCode}`)
-            response.on('data', (chunk) => {
-            })
-            response.on('end', () => {})
-        })
-        request.on('error', (error) => { 
-            log.info('Error while updating osInfo '+`${(error)}`) 
-        })
-        request.setHeader('Content-Type', 'application/json'); 
-        request.write(body, 'utf-8'); 
-        request.end();
+        exec('wmic path SoftwareLicensingService get OA3xOriginalProductKey', function(err, stdout, stderr) {
+         //console.log(stdout);
+         res = stdout.split('\n'); 
+         var ctr=0;
+         var product_key='';
+         res.forEach(function(line) {
+          ctr = Number(ctr)+Number(1);
+           line = line.trim();
+           var newStr = line.replace(/  +/g, ' ');
+           var parts = line.split(/  +/g);
+           if(ctr == 2){
+            product_key = parts;
+           }
+         });
+
+          var body = JSON.stringify({ "funcType": 'osInfo', "asset_id": asset_id, "version" : os_data,"license_key" : product_key }); 
+          const request = net.request({ 
+              method: 'POST', 
+              url: root_url+'/asset.php' 
+          }); 
+          request.on('response', (response) => {
+              //console.log(`STATUS: ${response.statusCode}`)
+              response.on('data', (chunk) => {
+              })
+              response.on('end', () => {})
+          })
+          request.on('error', (error) => { 
+              log.info('Error while updating osInfo '+`${(error)}`) 
+          })
+          request.setHeader('Content-Type', 'application/json'); 
+          request.write(body, 'utf-8'); 
+          request.end();
+
+        });
 
     });
 
