@@ -30,8 +30,9 @@ const Tray = electron.Tray;
 const iconPath = path.join(__dirname,'images/ePrompto_png.png');
 
 //global.root_url = 'https://www.eprompto.com/itam_backend_end_user';
-global.root_url = 'https://developer.eprompto.com/itam_backend_end_user';
+//global.root_url = 'https://developer.eprompto.com/itam_backend_end_user';
 //global.root_url = 'http://localhost/end_user_backend';
+global.root_url = 'https://poc.eprompto.com/itam_backend_end_user';
 
 let reqPath = path.join(app.getAppPath(), '../');
 const detail =  reqPath+"syskey.txt";
@@ -676,25 +677,25 @@ function updateAssetUtilisation(slot){
        var stats = fs.statSync(time_file); 
      var fileSizeInBytes = stats["size"]; 
      if(fileSizeInBytes > 0){
-          fs.readFile(time_file, 'utf8', function (err,data) {
-        if (err) {
-          return console.log(err);
-        }
-        time_off = data;
-      });
+        fs.readFile(time_file, 'utf8', function (err,data) {
+          if (err) {
+            return console.log(err);
+          }
+          time_off = data;
+        });
      }
     }
 
   session.defaultSession.cookies.get({ url: 'http://www.eprompto.com' })
     .then((cookies1) => {
 
-      const disks = nodeDiskInfo.getDiskInfoSync();
-    total_mem = (os.totalmem()/(1024*1024*1024)).toFixed(1); // total RAM
-    free_mem = (os.freemem()/(1024*1024*1024)).toFixed(1); // free RAM
+    const disks = nodeDiskInfo.getDiskInfoSync();
+    total_ram = (os.totalmem()/(1024*1024*1024)).toFixed(1); // total RAM
+    free_ram = (os.freemem()/(1024*1024*1024)).toFixed(1); // free RAM
       //tot_mem = (os.totalmem()/(1024*1024*1024)).toFixed(1);
       //utilised_RAM = tot_mem - free_mem; // in GB
     today = Math.floor(Date.now() / 1000);
-    utilised_RAM = (((total_mem - free_mem)/total_mem)*100).toFixed(1); // % RAM used
+    utilised_RAM = (((total_ram - free_ram)/total_ram)*100).toFixed(1); // % RAM used
 
     //used_mem = ((os.totalmem() - os.freemem())/(1024*1024*1024)).toFixed(1);
     hdd_total = hdd_used = 0;
@@ -721,7 +722,7 @@ function updateAssetUtilisation(slot){
           }
           getAppUsedList(function(app_data){
             app_name_list = app_data; 
-            CallUpdateAssetApi(cookies1[0].name,todays_date,slot,info,utilised_RAM,hdd_used,ctr,active_user_name,app_name_list,utilised_RAM,info,hdd_used,total_mem,hdd_total,hdd_name,time_off);           
+            CallUpdateAssetApi(cookies1[0].name,todays_date,slot,info,utilised_RAM,hdd_used,ctr,active_user_name,app_name_list,utilised_RAM,info,hdd_used,total_ram,hdd_total,hdd_name,time_off);           
           });
     })
   }).catch((error) => {
@@ -926,7 +927,7 @@ function readCSVUtilisation(){
             }
 
             const disks = nodeDiskInfo.getDiskInfoSync();
-            total_mem = (os.totalmem()/(1024*1024*1024)).toFixed(1);
+            //total_mem = (os.totalmem()/(1024*1024*1024)).toFixed(1);
             hdd_total = hdd_used = 0;
             hdd_name = '';
             for (const disk of disks) {
@@ -975,27 +976,27 @@ function MoveFile(){
              
   if (fs.existsSync(require_path)){
       const converter=csv()
-    .fromFile(reqPath + '/utilise.csv')
-    .then((json)=>{
-      if(json != []){
-        var datetime = new Date();
+      .fromFile(reqPath + '/utilise.csv')
+      .then((json)=>{
+        if(json != []){
+          var datetime = new Date();
           datetime = datetime.toISOString().slice(0,10);
-          
-        var oldPath = reqPath + '/utilise.csv';
-        require_path = reqPath + '/utilisation';
+            
+          var oldPath = reqPath + '/utilise.csv';
+          require_path = reqPath + '/utilisation';
 
-        if (!fs.existsSync(require_path)){
-            fs.mkdirSync(require_path);
-        } 
+          if (!fs.existsSync(require_path)){
+              fs.mkdirSync(require_path);
+          } 
 
-          var newPath = require_path + '/utilise_'+datetime+'.csv';
+            var newPath = require_path + '/utilise_'+datetime+'.csv';
 
-          mv(oldPath, newPath, err => {
-              if (err) log.info('Error while moving csv file to utilisation folder '+error);
-              log.info('Succesfully moved to Utilisation tab');
-          }); 
+            mv(oldPath, newPath, err => {
+                if (err) log.info('Error while moving csv file to utilisation folder '+error);
+                log.info('Succesfully moved to Utilisation tab');
+            }); 
 
-      }
+        }
     })
   }
 
@@ -1342,7 +1343,6 @@ ipcMain.on("download", (event, info) => {
                       d['detail'].forEach((dd) => {
                         output_one.push(dd.join()); // by default, join() uses a ','
                       });
-
                     });
                 
                   fs.writeFileSync(filename, output_one.join(os.EOL));
@@ -1491,142 +1491,142 @@ ipcMain.on('tabData',function(e,form_data){
           request.write(body, 'utf-8'); 
           request.end();
 
-      }else if(form_data['tabName'] == 'asset'){
+        }else if(form_data['tabName'] == 'asset'){
 
-        var body = JSON.stringify({ "funcType": 'assetDetail', "clientID": form_data['clientid'] }); 
-        const request = net.request({ 
-            method: 'POST', 
-            url: root_url+'/asset.php' 
-        }); 
-        request.on('response', (response) => {
-            //console.log(`STATUS: ${response.statusCode}`)
-            response.on('data', (chunk) => {
-              //console.log(`${chunk}`);
-              var obj = JSON.parse(chunk);
-               if(obj.status == 'valid'){
-                 e.reply('tabAssetReturn', obj.result[0]) ;
-               }
-            })
-            response.on('end', () => {})
-        })
-        request.on('error', (error) => { 
-            log.info('Error while fetching asset detail '+`${(error)}`)
-        })
-        request.setHeader('Content-Type', 'application/json'); 
-        request.write(body, 'utf-8'); 
-        request.end();
-        
-      }else if(form_data['tabName'] == 'user'){
+          var body = JSON.stringify({ "funcType": 'assetDetail', "clientID": form_data['clientid'] }); 
+          const request = net.request({ 
+              method: 'POST', 
+              url: root_url+'/asset.php' 
+          }); 
+          request.on('response', (response) => {
+              //console.log(`STATUS: ${response.statusCode}`)
+              response.on('data', (chunk) => {
+                //console.log(`${chunk}`);
+                var obj = JSON.parse(chunk);
+                 if(obj.status == 'valid'){
+                   e.reply('tabAssetReturn', obj.result[0]) ;
+                 }
+              })
+              response.on('end', () => {})
+          })
+          request.on('error', (error) => { 
+              log.info('Error while fetching asset detail '+`${(error)}`)
+          })
+          request.setHeader('Content-Type', 'application/json'); 
+          request.write(body, 'utf-8'); 
+          request.end();
+          
+        }else if(form_data['tabName'] == 'user'){
 
-        var body = JSON.stringify({ "funcType": 'userDetail', "clientID": form_data['clientid'] }); 
-        const request = net.request({ 
-            method: 'POST', 
-            url: root_url+'/user.php' 
-        }); 
-        request.on('response', (response) => {
-            //console.log(`STATUS: ${response.statusCode}`)
-            response.on('data', (chunk) => {
-              //console.log(`${chunk}`);
-              var obj = JSON.parse(chunk);
-               if(obj.status == 'valid'){
-                 if(obj.result[0][2] == ''){
-                    obj.result[0][2] = 'Not Available';
-                  }
+          var body = JSON.stringify({ "funcType": 'userDetail', "clientID": form_data['clientid'] }); 
+          const request = net.request({ 
+              method: 'POST', 
+              url: root_url+'/user.php' 
+          }); 
+          request.on('response', (response) => {
+              //console.log(`STATUS: ${response.statusCode}`)
+              response.on('data', (chunk) => {
+                //console.log(`${chunk}`);
+                var obj = JSON.parse(chunk);
+                 if(obj.status == 'valid'){
+                   if(obj.result[0][2] == ''){
+                      obj.result[0][2] = 'Not Available';
+                    }
 
-                  if(obj.result[0][3] == ''){
-                    obj.result[0][3] = 'Not Available';
-                  }
+                    if(obj.result[0][3] == ''){
+                      obj.result[0][3] = 'Not Available';
+                    }
 
-                e.reply('tabUserReturn', obj.result[0]);
-               }
-            })
-            response.on('end', () => {})
-        })
-        request.on('error', (error) => { 
-            log.info('Error while fetching user detail '+`${(error)}`)
-        })
-        request.setHeader('Content-Type', 'application/json'); 
-        request.write(body, 'utf-8'); 
-        request.end();
-        
-      }else if(form_data['tabName'] == 'usage'){
-         e.reply('tabUtilsReturn', '') ;
-      }else if(form_data['tabName'] == 'app'){ 
-         session.defaultSession.cookies.get({ url: 'http://www.eprompto.com' })
-           .then((cookies1) => {
-            if(cookies1.length > 0){
-              request({
-              uri: root_url+"/utilisation.php",
-              method: "POST",
-              form: {
-                funcType: 'appDetail',
-                sys_key: cookies1[0].name,
-                from_date: form_data['from'],
-                to_date: form_data['to']
-              }
-            }, function(error, response, body) { 
-              if(error){
-                log.info('Error while fetching app detail '+error);
-              }else{
-                if(body != '' || body != null){ 
-                  output = JSON.parse(body); 
-                  if(output.status == 'valid'){ 
-                    e.reply('tabAppReturn', output.result) ;
-                  }else if(output.status == 'invalid'){
-                    e.reply('tabAppReturn', output.result) ;
+                  e.reply('tabUserReturn', obj.result[0]);
+                 }
+              })
+              response.on('end', () => {})
+          })
+          request.on('error', (error) => { 
+              log.info('Error while fetching user detail '+`${(error)}`)
+          })
+          request.setHeader('Content-Type', 'application/json'); 
+          request.write(body, 'utf-8'); 
+          request.end();
+          
+        }else if(form_data['tabName'] == 'usage'){
+           e.reply('tabUtilsReturn', '') ;
+        }else if(form_data['tabName'] == 'app'){ 
+           session.defaultSession.cookies.get({ url: 'http://www.eprompto.com' })
+             .then((cookies1) => {
+              if(cookies1.length > 0){
+                request({
+                uri: root_url+"/utilisation.php",
+                method: "POST",
+                form: {
+                  funcType: 'appDetail',
+                  sys_key: cookies1[0].name,
+                  from_date: form_data['from'],
+                  to_date: form_data['to']
+                }
+              }, function(error, response, body) { 
+                if(error){
+                  log.info('Error while fetching app detail '+error);
+                }else{
+                  if(body != '' || body != null){ 
+                    output = JSON.parse(body); 
+                    if(output.status == 'valid'){ 
+                      e.reply('tabAppReturn', output.result) ;
+                    }else if(output.status == 'invalid'){
+                      e.reply('tabAppReturn', output.result) ;
+                    }
                   }
                 }
+              });
               }
-            });
-            }
           }).catch((error) => {
             console.log(error)
           })
         
-      }else if(form_data['tabName'] == 'quick_util'){ 
-        var result = [];
-        const cpu = osu.cpu;
-        const disks = nodeDiskInfo.getDiskInfoSync();
+        }else if(form_data['tabName'] == 'quick_util'){ 
+          var result = [];
+          const cpu = osu.cpu;
+          const disks = nodeDiskInfo.getDiskInfoSync();
 
-        total_ram = (os.totalmem()/(1024*1024*1024)).toFixed(1);
-        free_ram = (os.freemem()/(1024*1024*1024)).toFixed(1);
-        utilised_RAM = (total_ram - free_ram).toFixed(1);
-        
-        result['total_ram'] = total_ram;
-        result['used_ram'] = utilised_RAM;
+          total_ram = (os.totalmem()/(1024*1024*1024)).toFixed(1);
+          free_ram = (os.freemem()/(1024*1024*1024)).toFixed(1);
+          utilised_RAM = (total_ram - free_ram).toFixed(1);
+          
+          result['total_ram'] = total_ram;
+          result['used_ram'] = utilised_RAM;
 
-        hdd_total = hdd_used = 0;
-        hdd_name = '';
+          hdd_total = hdd_used = 0;
+          hdd_name = '';
 
-        for (const disk of disks) {
-             if(disk.filesystem == 'Local Fixed Disk'){
-               hdd_total = hdd_total + disk.blocks;
-               hdd_used = hdd_used + disk.used;
-               used_drive = (disk.used/(1024*1024*1024)).toFixed(2); 
-               hdd_name = hdd_name.concat(disk.mounted+' '+used_drive+'  GB/ ');
-           }
-              
+          for (const disk of disks) {
+               if(disk.filesystem == 'Local Fixed Disk'){
+                 hdd_total = hdd_total + disk.blocks;
+                 hdd_used = hdd_used + disk.used;
+                 used_drive = (disk.used/(1024*1024*1024)).toFixed(2); 
+                 hdd_name = hdd_name.concat(disk.mounted+' '+used_drive+'  GB/ ');
+             }
+                
           }
 
           hdd_total = (hdd_total/(1024*1024*1024)).toFixed(1);
           hdd_used = (hdd_used/(1024*1024*1024)).toFixed(1);
 
           result['hdd_total'] = hdd_total;
-        result['hdd_used'] = hdd_used;
-        result['hdd_name'] = hdd_name;
+          result['hdd_used'] = hdd_used;
+          result['hdd_name'] = hdd_name;
 
-        
-        cpu.usage()
-          .then(info => { 
+          
+          cpu.usage()
+            .then(info => { 
 
-            if(info == 0){
-              info = 1;
-            }
+              if(info == 0){
+                info = 1;
+              }
 
-            result['cpu_usage'] = info;
-            e.reply('setInstantUtil',result);
-        })
-      }
+              result['cpu_usage'] = info;
+              e.reply('setInstantUtil',result);
+          })
+        }
       }
   }).catch((error) => {
       console.log(error)
@@ -1671,13 +1671,13 @@ ipcMain.on('form_data',function(e,form_data){
     issue_type_id ="1,13,47,179,"+category;
   }
   else if(form_data['disp_type'] == 'Network'){
-    issue_type_id ="1,14,47,"+category;
+    issue_type_id ="1,13,47,"+category;
   }
   else if(form_data['disp_type'] == 'Antivirus'){
-    issue_type_id ="1,14,56,156,265,"+category;
+    issue_type_id ="1,13,56,156,265,"+category;
   }
   else if(form_data['disp_type'] == 'Application'){
-    issue_type_id ="1,14,56,156,"+category;
+    issue_type_id ="1,13,56,156,"+category;
   }
   else if(form_data['disp_type'] == 'Printers'){
     issue_type_id ="6,22,42,"+category;
@@ -2742,7 +2742,7 @@ ipcMain.on('checkfmfselected',function(e,form_data){
                   var today = obj.result.current_date;
                   global.fmf_asset_id = obj.result.fmf_asset_id;
                   var result = [];
-                  if(search_type != 2){
+                  if(search_type != 2){ // 2 mean Scheduled search.
                     getsearchparameter(asset_id,mem_client_id,mem_user_id,fmf_asset_id,function(events){
                       if(events == 'success'){
                         console.log('hello created');
@@ -2782,7 +2782,7 @@ ipcMain.on('checkfmfselected',function(e,form_data){
   });
 });
 
-var getsearchparameter = function(asset_id,mem_client_id,mem_user_id,fmf_asset_id,callback) { 
+var getsearchparameter = function(asset_id,mem_client_id,mem_user_id,fmf_asset_id,callback) { console.log('hee');
   require('dns').resolve('www.google.com', function(err) {
     if (err) {
        console.log("No connection");
@@ -2878,7 +2878,7 @@ var getsearchparameter = function(asset_id,mem_client_id,mem_user_id,fmf_asset_i
               "}| Export-Csv C:\\ITAMEssential\\EventLogCSV\\findmyfile.csv -NoTypeInformation ";
 
                 const path1 = 'C:/ITAMEssential/findmyfile.ps1';
-                fs.writeFile(path1, content, function (err) {
+                fs.writeFile(path1, content, function (err) { 
                   if (err){
                     throw err;
                   }else{

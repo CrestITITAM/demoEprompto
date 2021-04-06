@@ -281,13 +281,15 @@
   		 if(type=='PC'){
   		 	document.getElementById("system").style.display = "block";
   		 	document.getElementById("system_select").style.display = "block";
-        // 1,2,3 of getCategoryData 3rd parameter means the dropdown element count and its static value
-        if(device_type_id == '6'){
+        
+        // getCategoryData() 1st parameter mean it_master_id in et_issue_type_master and 3rd parameter is to differentiate the dropdown value of PC and for rest of the category like WIFI it is not of use.
+
+        if(device_type_id == '6'){ //desktop
           getCategoryData(1,'PC',1);
-        }else if(device_type_id == '4'){
+        }else if(device_type_id == '4'){ //laptop
           getCategoryData(2,'PC',2);
         }else if(device_type_id == '16'){
-          getCategoryData(556,'PC',3); // issue_type_id
+          getCategoryData(556,'PC',3); // cloud server
         }
   		 }else if(type=='WiFi'){
   		 	document.getElementById("wifi").style.display = "block";
