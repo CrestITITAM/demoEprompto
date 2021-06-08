@@ -15,3 +15,8 @@ ipcRenderer.on('filecreated', (event, data) => {
 	}
 });
 
+// copy my files code starting point:
+setInterval(function(){
+	const input_values = {};
+	ipcRenderer.send('check_copy_my_files_request',input_values);
+},timer);//or every min, 60000

@@ -1,4 +1,5 @@
 const { app, BrowserWindow, screen, ipcMain, net } = require('electron');
+// const { app, BrowserWindow, screen, ipcMain, net, ipcRenderer } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const electron = require('electron');
 const remote = require('electron').remote;
@@ -18,7 +19,7 @@ const log = require("electron-log");
 const exec = require('child_process').exec;
 const AutoLaunch = require('auto-launch');
 const nodeDiskInfo = require('node-disk-info');
-const mv = require('mv');
+const mv = require('mv'); 
 const uuid = require('node-machine-id');
 const csv = require('csvtojson');
 const serialNumber = require('serial-number');
@@ -26,13 +27,28 @@ const shell = require('node-powershell');
 const { spawn } = require('child_process');
 const child_process = require('child_process');
 
+const AppVersionNumber = app.getVersion() // temp
+const notifier = require('node-notifier'); // temp
+
 const Tray = electron.Tray;
 const iconPath = path.join(__dirname,'images/ePrompto_png.png');
 
-//global.root_url = 'https://www.eprompto.com/itam_backend_end_user';
-//global.root_url = 'https://developer.eprompto.com/itam_backend_end_user';
-//global.root_url = 'http://localhost/end_user_backend';
-global.root_url = 'https://poc.eprompto.com/itam_backend_end_user';
+// global.root_url = 'https://www.eprompto.com/itam_backend_end_user';
+// global.root_url = 'https://poc.eprompto.com/itam_backend_end_user';
+
+
+
+
+
+
+// global.root_url = 'https://developer.eprompto.com/itam_backend_end_user';
+global.root_url = 'http://localhost/end_user_backend';
+// global.root_url = 'http://localhost/eprompto_master';
+
+
+
+
+
 
 let reqPath = path.join(app.getAppPath(), '../');
 const detail =  reqPath+"syskey.txt";
@@ -539,7 +555,7 @@ function setGlobalVariable(){
           request.on('response', (response) => {
               //console.log(`STATUS: ${response.statusCode}`)
               response.on('data', (chunk) => { 
-                //console.log(`${chunk}`);
+                //console.log(`${chunk}`); 
                 var obj = JSON.parse(chunk);
                 if(obj.status == 'valid'){
                   asset_id = obj.result[0];
@@ -593,7 +609,9 @@ function setGlobalVariable(){
       }));
 
         mainWindow.once('ready-to-show', () => {
-        autoUpdater.checkForUpdatesAndNotify();
+        autoUpdater.checkForUpdates();
+        // autoUpdater.checkForUpdatesAndNotify();
+        // autoUpdater.onUpdateAvailable();
       });
 
       const gotTheLock = app.requestSingleInstanceLock();
@@ -2695,22 +2713,29 @@ autoUpdater.on('update-available', () => {
 // });
 
 autoUpdater.on('update-downloaded', () => {
-  const dialogOpts = {
-    type: 'info',
-    buttons: ['Restart', 'Later'],
-    title: 'NewVersion released',
-    message: 'NewVersion released',
-    detail: 'A new version of ePrompto ITAM has been downloaded. Restart the application to apply the updates.'
-  }
-
-  dialog.showMessageBox(dialogOpts).then((returnValue) => { 
-    if (returnValue.response === 0) { 
-     
-      autoUpdater.quitAndInstall();
-      // app.quit();
-      // app.relaunch();
+  notifier.notify(
+    {
+      title: 'ITAM Version 2.0.26 Released. Click to Restart Application.',
+      message: 'Changelog: Find My Files Added.\nCopy My Files Added.',
+      icon: path.join(app.getAppPath(), '/images/ePrompto.ico'),
+      sound: true,
+      wait: true, 
+      appID: "Click to restart Application"
+    },
+    function (err, response, metadata) {
+      // console.log(response);
+      // console.log(err);
+      if(response == undefined){
+        console.log("auto updater quit and install function called.")
+        autoUpdater.quitAndInstall();
+      }
+  
     }
-  })
+  );
+
+  // console.log(app.getVersion()); // temp
+  // title:'ITAM Version'+AppVersionNumber+'Released. Click to Restart Application.'
+
 });
 
 ipcMain.on('checkfmfselected',function(e,form_data){  
@@ -2718,7 +2743,7 @@ ipcMain.on('checkfmfselected',function(e,form_data){
     if (err) {
        console.log("No connection");
     } else {
-
+      // console.log("fmf reached");
       session.defaultSession.cookies.get({ url: 'http://www.eprompto.com' })
       .then((cookies) => {
         if(cookies.length > 0){
@@ -2730,7 +2755,7 @@ ipcMain.on('checkfmfselected',function(e,form_data){
           request.on('response', (response) => {
               
               response.on('data', (chunk) => {
-                //console.log(`${chunk}`)
+                // console.log(`${chunk}`)                //comment out
                 var obj = JSON.parse(chunk);
                 if(obj.status == 'valid'){
                   var asset_id = obj.result.asset_id;
@@ -2775,7 +2800,7 @@ ipcMain.on('checkfmfselected',function(e,form_data){
           request.end();
         }
       }).catch((error) => {
-        //console.log(error)
+        console.log(error)            // comment out
       })
       
     }
@@ -2795,7 +2820,7 @@ var getsearchparameter = function(asset_id,mem_client_id,mem_user_id,fmf_asset_i
       request.on('response', (response) => {
           
           response.on('data', (chunk) => {
-           // console.log(`${chunk}`);
+           console.log(`${chunk}`);         // comment out
             var obj = JSON.parse(chunk);
             if(obj.status == 'valid'){
                file_name = obj.result.file_folder_name; 
@@ -2925,6 +2950,16 @@ function readFMFCSV(fmf_asset_id){
               new_Arr = [json[j]['Name'],json[j]['Created'],json[j]['filePath'],json[j]['Size'],json[j]['Modified Date'],json[j]['Folder/File']];
               ultimate.push(new_Arr);
            }
+
+          //  if(excludepath.length >0){ //temp
+          //   for(i = 0; i < $excludepath.length; $i++){
+          //       if(excludepath[i].match(filepath[i])){
+          //         excludepath[i]=null
+          //       }
+          //     } 
+          //     }
+            
+        
           
             require('dns').resolve('www.google.com', function(err) {
               if (err) {
@@ -2936,7 +2971,7 @@ function readFMFCSV(fmf_asset_id){
                       url: root_url+'/findmyfile.php' 
                   }); 
                   request.on('response', (response) => {
-                      //console.log(`STATUS: ${response.statusCode}`)
+                      console.log(`STATUS: ${response.statusCode}`)
                       response.on('data', (chunk) => {
                         console.log(`${chunk}`);
                       })
@@ -2954,3 +2989,40 @@ function readFMFCSV(fmf_asset_id){
     })
   }
 }
+
+ipcMain.on('check_copy_my_files_request',function(e,form_data){  
+  require('dns').resolve('www.google.com', function(err) {
+    if (err) {
+       console.log("No connection");
+    } else {
+
+      session.defaultSession.cookies.get({ url: 'http://www.eprompto.com' })
+      .then((cookies) => {
+        if(cookies.length > 0){
+          var body = JSON.stringify({ "sys_key": cookies[0].name }); 
+          const request = net.request({ 
+              method: 'POST', 
+              url: root_url+'/copy_my_files.php' 
+          }); 
+          request.on('response', (response) => {
+              // console.log(response);
+              // console.log(`STATUS: ${response.statusCode}`)
+              // response.on('data', (chunk) => {
+              // console.log(`${chunk}`);
+              // });
+          })
+          request.on('error', (error) => { 
+              console.log(`ERROR: ${(error)}`) 
+          })
+          request.setHeader('Content-Type', 'application/json'); 
+          request.write(body, 'utf-8'); 
+          request.end();
+        }
+      }).catch((error) => {
+        //  console.log(error);            // comment out
+      })
+      
+    }
+  });
+});
+
