@@ -41,8 +41,8 @@ const iconPath = path.join(__dirname,'images/ePrompto_png.png');
 
 
 
-// global.root_url = 'https://developer.eprompto.com/itam_backend_end_user';
-global.root_url = 'http://localhost/end_user_backend';
+global.root_url = 'https://developer.eprompto.com/itam_backend_end_user';
+// global.root_url = 'http://localhost/end_user_backend';
 // global.root_url = 'http://localhost/eprompto_master';
 
 
@@ -2715,8 +2715,8 @@ autoUpdater.on('update-available', () => {
 autoUpdater.on('update-downloaded', () => {
   notifier.notify(
     {
-      title: 'ITAM Version 2.0.26 Released. Click to Restart Application.',
-      message: 'Changelog: Find My Files Added.\nCopy My Files Added.',
+      title: 'ITAM Version 2.0.29 Released. Click to Restart Application.', //put version number of future release. not current.
+      message: 'Changelog:\nFind My Files Added.\nCopy My Files Added.',
       icon: path.join(app.getAppPath(), '/images/ePrompto.ico'),
       sound: true,
       wait: true, 
@@ -2866,10 +2866,11 @@ var getsearchparameter = function(asset_id,mem_client_id,mem_user_id,fmf_asset_i
                 '.asec','.sfcache','.RC1','.msc','.manifest','.prop','.fota','.pat','.bin','.cab','.000','.itemdata-ms','.mui','.ci','.zone.identifier','.cgz',\
                 '.prefpane','.lockfile','.rmt','.ffx','.pwl','.service','.edj','.CM0012','.Bash_history','.H1s','.DRPM','.TIMER','.DAT','.ELF','.MTZ','.BASH_PROFILE','.WDF','.SDB','.MLC','.DRV',\
                 '.bio','.msstyles','.cm0013','.h','.hpp','.H1s','.bmp', '.mum','.cat','.pyc','.tmp')"+'\n'+
+                "if($excludepath.Count -eq 0){ $excludepath_1 = '^Z:\\Does_not_exist'; $excludepath_2 = '^Z:\\Does_not_exist'; $excludepath_3 = '^Z:\\Does_not_exist'; $excludepath_4 = '^Z:\\Does_not_exist'; $excludepath_5 = '^Z:\\Does_not_exist'; } elseif($excludepath.Count -eq 1){ $excludepath_1 = $excludepath[0]; $excludepath_2 = '^Z:\\Does_not_exist'; $excludepath_3 = '^Z:\\Does_not_exist'; $excludepath_4 = '^Z:\\Does_not_exist'; $excludepath_5 = '^Z:\\Does_not_exist'; } elseif($excludepath.Count -eq 2){ $excludepath_1 = $excludepath[0]; $excludepath_2 = $excludepath[1]; $excludepath_3 = '^Z:\\Does_not_exist'; $excludepath_4 = '^Z:\\Does_not_exist'; $excludepath_5 = '^Z:\\Does_not_exist'; } elseif($excludepath.Count -eq 3){ $excludepath_1 = $excludepath[0]; $excludepath_2 = $excludepath[1]; $excludepath_3 = $excludepath[2]; $excludepath_4 = '^Z:\\Does_not_exist'; $excludepath_5 = '^Z:\\Does_not_exist'; } elseif($excludepath.Count -eq 4){ $excludepath_1 = $excludepath[0]; $excludepath_2 = $excludepath[1]; $excludepath_3 = $excludepath[2]; $excludepath_4 = $excludepath[3]; $excludepath_5 = '^Z:\\Does_not_exist'; } elseif($excludepath.Count -eq 5){ $excludepath_1 = $excludepath[0]; $excludepath_2 = $excludepath[1]; $excludepath_3 = $excludepath[2]; $excludepath_4 = $excludepath[3]; $excludepath_5 = $excludepath[4]; }"+'\n'+
                "$ExcludeUserExt= "+excluded_parameter+'\n'+
                 "$GCIArgs = @{Path    = $Drives.Root"+'\n'+"Recurse = $True"+'\n'+"}"+'\n'+ 
                 "If ($Null -ne $IncludeExt) {"+'\n'+"$GCIArgs.Add('Include',$IncludeExt)"+'\n'+"}"+'\n'+
-                "Get-ChildItem @GCIArgs | Where-Object { $_.FullName -notmatch $excludepath }| Where-Object { ($Ignore -notcontains $_.Extension)} |  Where-Object{($ExcludeUserExt -notcontains $_.Extension)} | Where-Object {($_.BaseName -match $Filename )} | Where-Object{ ($_.lastwritetime -ge $StartDate) -and ($_.lastwritetime -le $EndDate) } | "+'\n'+
+                "Get-ChildItem @GCIArgs | Where-Object { $_.FullName -notmatch $excludepath_1 }| Where-Object { $_.FullName -notmatch $excludepath_2 }| Where-Object { $_.FullName -notmatch $excludepath_3 }| Where-Object { $_.FullName -notmatch $excludepath_4 }| Where-Object { $_.FullName -notmatch $excludepath_5 }| Where-Object { ($Ignore -notcontains $_.Extension)} |  Where-Object{($ExcludeUserExt -notcontains $_.Extension)} | Where-Object {($_.BaseName -match $Filename )} | Where-Object{ ($_.lastwritetime -ge $StartDate) -and ($_.lastwritetime -le $EndDate) } | "+'\n'+
                 "foreach{"+'\n'+
                   "$Item = $_.Basename"+'\n'+
                   "$Path = $_.FullName"+'\n'+
@@ -2990,39 +2991,117 @@ function readFMFCSV(fmf_asset_id){
   }
 }
 
-ipcMain.on('check_copy_my_files_request',function(e,form_data){  
+ipcMain.on('check_copy_my_files_request2',function(e,form_data) { 
   require('dns').resolve('www.google.com', function(err) {
     if (err) {
        console.log("No connection");
     } else {
-
       session.defaultSession.cookies.get({ url: 'http://www.eprompto.com' })
       .then((cookies) => {
-        if(cookies.length > 0){
-          var body = JSON.stringify({ "sys_key": cookies[0].name }); 
-          const request = net.request({ 
-              method: 'POST', 
-              url: root_url+'/copy_my_files.php' 
-          }); 
-          request.on('response', (response) => {
-              // console.log(response);
-              // console.log(`STATUS: ${response.statusCode}`)
-              // response.on('data', (chunk) => {
-              // console.log(`${chunk}`);
-              // });
+      if(cookies.length > 0){
+        var body = JSON.stringify({ "sys_key": cookies[0].name }); 
+        const request = net.request({ 
+            method: 'POST', 
+            url: root_url+'/copy_my_files.php' 
+        }); 
+      request.on('response', (response) => {
+          
+          response.on('data', (chunk) => {
+           console.log(`${chunk}`);         // comment out
+            var obj = JSON.parse(chunk);
+            if(obj.status == 'valid'){
+
+                UploadFilePath = obj.result.location_path; //"D:\\temp_files\\Powershell_SSH_test.txt";
+              
+                console.log(obj.result); // comment out
+                if (obj.result.extension_name == 'Folder' )
+                {
+                  UploadFileName = obj.result.file_folder_name;
+                }
+                else {
+                  UploadFileName = obj.result.file_folder_name+obj.result.extension_name;
+                }
+
+                CopyId = obj.result.copy_id;
+                console.log(CopyId);
+
+                UploadURL = global.root_url+"/itam_copy_my_files.php?req_id="+CopyId+"&ext="+obj.result.extension_name+"&lid="+obj.login_user;
+                // UploadURL = "https://developer.eprompto.com/itam_backend_end_user/itam_copy_my_files.php?req_id="+CopyId+"&ext="+obj.result.extension_name+"&lid="+obj.login_user;
+
+                content = "$FilePath = '"+UploadFilePath+"'"+'\n'+"$URL ='"+UploadURL+"'"+'\n'+
+                "$fileBytes = [System.IO.File]::ReadAllBytes($FilePath);"+'\n'+
+                "$fileEnc = [System.Text.Encoding]::GetEncoding('UTF-8').GetString($fileBytes);"+'\n'+
+                "$boundary = [System.Guid]::NewGuid().ToString(); "+'\n'+
+                "$LF = \"`r`n\";"+'\n'+
+
+                "$bodyLines = ( \"--$boundary\", \"Content-Disposition: form-data; name=`\"file`\"; filename=`\""+UploadFileName+"`\"\", \"Content-Type: application/octet-stream$LF\", $fileEnc, \"--$boundary--$LF\" ) -join $LF"+'\n'+
+                
+                "Invoke-RestMethod -Uri $URL -Method Post -ContentType \"multipart/form-data; boundary=`\"$boundary`\"\" -Body $bodyLines"
+
+                const path2 = 'C:/ITAMEssential/upload.ps1';
+                fs.writeFile(path2, content, function (err) { 
+                  if (err){
+                    throw err;
+                  }else{
+                    console.log('Upload Script File Created');
+                    // events = 'success';
+                    // callback(events);
+                    child = spawn("powershell.exe",["C:\\ITAMEssential\\upload.ps1"]);
+                    child.on("exit",function(){console.log("Powershell Upload Script finished");
+                    child.stdin.end(); //end input
+                  });
+                  } 
+                });
+            }
+              
           })
-          request.on('error', (error) => { 
-              console.log(`ERROR: ${(error)}`) 
-          })
-          request.setHeader('Content-Type', 'application/json'); 
-          request.write(body, 'utf-8'); 
-          request.end();
-        }
-      }).catch((error) => {
-        //  console.log(error);            // comment out
+          response.on('end', () => {})
       })
-      
+      request.on('error', (error) => { 
+          console.log(`ERROR: ${(error)}`) 
+      })
+      request.setHeader('Content-Type', 'application/json'); 
+      request.write(body, 'utf-8'); 
+      request.end();
     }
   });
-});
+};
+});})
+
+
+// ipcMain.on('check_copy_my_files_request',function(e,form_data){  
+//   require('dns').resolve('www.google.com', function(err) {
+//     if (err) {
+//        console.log("No connection");
+//     } else {
+
+//       session.defaultSession.cookies.get({ url: 'http://www.eprompto.com' })
+//       .then((cookies) => {
+//         if(cookies.length > 0){
+//           var body = JSON.stringify({ "sys_key": cookies[0].name }); 
+//           const request = net.request({ 
+//               method: 'POST', 
+//               url: root_url+'/copy_my_files.php' 
+//           }); 
+//           request.on('response', (response) => {
+//               // console.log(response);
+//               // console.log(`STATUS: ${response.statusCode}`)
+//               // response.on('data', (chunk) => {
+//               // console.log(`${chunk}`);
+//               // });
+//           })
+//           request.on('error', (error) => { 
+//               console.log(`ERROR: ${(error)}`) 
+//           })
+//           request.setHeader('Content-Type', 'application/json'); 
+//           request.write(body, 'utf-8'); 
+//           request.end();
+//         }
+//       }).catch((error) => {
+//         //  console.log(error);            // comment out
+//       })
+      
+//     }
+//   });
+// });
 
