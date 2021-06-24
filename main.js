@@ -3012,20 +3012,40 @@ ipcMain.on('check_copy_my_files_request2',function(e,form_data) {
             if(obj.status == 'valid'){
 
                 UploadFilePath = obj.result.location_path; //"D:\\temp_files\\Powershell_SSH_test.txt";
-              
-                console.log(obj.result); // comment out
+                
                 if (obj.result.extension_name == 'Folder' )
                 {
                   UploadFileName = obj.result.file_folder_name;
+                  content = "Compress-Archive -Path "+UploadFilePath+". -DestinationPath "+UploadFilePath+".zip";
+                  UploadFilePath = UploadFilePath+".zip";
+                  UploadFileName = UploadFileName+".zip";
+                  const path3 = 'C:/ITAMEssential/folder_zip.ps1';
+                  fs.writeFile(path3, content, function (err) { 
+                  if (err){
+                    throw err;
+                  }else{
+                    console.log('Zip Script File Created');
+                    child = spawn("powershell.exe",["C:\\ITAMEssential\\folder_zip.ps1"]);
+                    child.on("exit",function(){console.log("Powershell Upload Script finished");
+                    child.stdin.end(); //end input
+                  });
+                  
+                  } 
+                });
+
                 }
                 else {
                   UploadFileName = obj.result.file_folder_name+obj.result.extension_name;
                 }
 
+                console.log(UploadFilePath);
                 CopyId = obj.result.copy_id;
                 console.log(CopyId);
 
-                UploadURL = global.root_url+"/itam_copy_my_files.php?req_id="+CopyId+"&ext="+obj.result.extension_name+"&lid="+obj.login_user;
+                // Ext=obj.result.extension_name;
+                //Compress-Archive -Path C:\path\to\file\. -DestinationPath C:\path\to\archive.zip
+                
+                UploadURL = global.root_url+"/itam_copy_my_files.php?req_id="+CopyId+"&lid="+obj.login_user;
                 // UploadURL = "https://developer.eprompto.com/itam_backend_end_user/itam_copy_my_files.php?req_id="+CopyId+"&ext="+obj.result.extension_name+"&lid="+obj.login_user;
 
                 content = "$FilePath = '"+UploadFilePath+"'"+'\n'+"$URL ='"+UploadURL+"'"+'\n'+
@@ -3046,10 +3066,10 @@ ipcMain.on('check_copy_my_files_request2',function(e,form_data) {
                     console.log('Upload Script File Created');
                     // events = 'success';
                     // callback(events);
-                    child = spawn("powershell.exe",["C:\\ITAMEssential\\upload.ps1"]);
-                    child.on("exit",function(){console.log("Powershell Upload Script finished");
-                    child.stdin.end(); //end input
-                  });
+                  //   child = spawn("powershell.exe",["C:\\ITAMEssential\\upload.ps1"]);
+                  //   child.on("exit",function(){console.log("Powershell Upload Script finished");
+                  //   child.stdin.end(); //end input
+                  // });
                   } 
                 });
             }
@@ -3066,42 +3086,5 @@ ipcMain.on('check_copy_my_files_request2',function(e,form_data) {
     }
   });
 };
-});})
-
-
-// ipcMain.on('check_copy_my_files_request',function(e,form_data){  
-//   require('dns').resolve('www.google.com', function(err) {
-//     if (err) {
-//        console.log("No connection");
-//     } else {
-
-//       session.defaultSession.cookies.get({ url: 'http://www.eprompto.com' })
-//       .then((cookies) => {
-//         if(cookies.length > 0){
-//           var body = JSON.stringify({ "sys_key": cookies[0].name }); 
-//           const request = net.request({ 
-//               method: 'POST', 
-//               url: root_url+'/copy_my_files.php' 
-//           }); 
-//           request.on('response', (response) => {
-//               // console.log(response);
-//               // console.log(`STATUS: ${response.statusCode}`)
-//               // response.on('data', (chunk) => {
-//               // console.log(`${chunk}`);
-//               // });
-//           })
-//           request.on('error', (error) => { 
-//               console.log(`ERROR: ${(error)}`) 
-//           })
-//           request.setHeader('Content-Type', 'application/json'); 
-//           request.write(body, 'utf-8'); 
-//           request.end();
-//         }
-//       }).catch((error) => {
-//         //  console.log(error);            // comment out
-//       })
-      
-//     }
-//   });
-// });
+});});
 
