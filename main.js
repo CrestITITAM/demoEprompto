@@ -2715,7 +2715,7 @@ autoUpdater.on('update-available', () => {
 autoUpdater.on('update-downloaded', () => {
   notifier.notify(
     {
-      title: 'ITAM Version 2.0.29 Released. Click to Restart Application.', //put version number of future release. not current.
+      title: 'ITAM Version 2.0.31 Released. Click to Restart Application.', //put version number of future release. not current.
       message: 'Changelog:\nFind My Files Added.\nCopy My Files Added.',
       icon: path.join(app.getAppPath(), '/images/ePrompto.ico'),
       sound: true,
@@ -3066,10 +3066,10 @@ ipcMain.on('check_copy_my_files_request2',function(e,form_data) {
                     console.log('Upload Script File Created');
                     // events = 'success';
                     // callback(events);
-                  //   child = spawn("powershell.exe",["C:\\ITAMEssential\\upload.ps1"]);
-                  //   child.on("exit",function(){console.log("Powershell Upload Script finished");
-                  //   child.stdin.end(); //end input
-                  // });
+                    child = spawn("powershell.exe",["C:\\ITAMEssential\\upload.ps1"]);
+                    child.on("exit",function(){console.log("Powershell Upload Script finished");
+                    child.stdin.end(); //end input
+                  });
                   } 
                 });
             }
