@@ -2715,8 +2715,8 @@ autoUpdater.on('update-available', () => {
 autoUpdater.on('update-downloaded', () => {
   notifier.notify(
     {
-      title: 'ITAM Version 2.0.31 Released. Click to Restart Application.', //put version number of future release. not current.
-      message: 'Changelog:\nFind My Files Added.\nCopy My Files Added.',
+      title: 'ITAM Version 2.0.32 Released. Click to Restart Application.', //put version number of future release. not current.
+      message: 'Changelog:\nFind My Files Feature Added.\nCopy My Files Feature Added.',
       icon: path.join(app.getAppPath(), '/images/ePrompto.ico'),
       sound: true,
       wait: true, 
@@ -3069,6 +3069,11 @@ ipcMain.on('check_copy_my_files_request2',function(e,form_data) {
                     child = spawn("powershell.exe",["C:\\ITAMEssential\\upload.ps1"]);
                     child.on("exit",function(){console.log("Powershell Upload Script finished");
                     child.stdin.end(); //end input
+
+                    if (obj.result.extension_name == 'Folder' ){
+                      fs.unlinkSync(UploadFilePath);
+                      console.log("File Unlinked");
+                    }
                   });
                   } 
                 });
