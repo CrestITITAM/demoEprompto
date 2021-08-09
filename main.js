@@ -1,5 +1,4 @@
 const { app, BrowserWindow, screen, ipcMain, net } = require('electron');
-// const { app, BrowserWindow, screen, ipcMain, net, ipcRenderer } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const electron = require('electron');
 const remote = require('electron').remote;
@@ -27,7 +26,6 @@ const shell = require('node-powershell');
 const { spawn } = require('child_process');
 const child_process = require('child_process');
 
-const AppVersionNumber = app.getVersion() // temp
 const notifier = require('node-notifier'); // temp
 
 const Tray = electron.Tray;
@@ -2715,8 +2713,8 @@ autoUpdater.on('update-available', () => {
 autoUpdater.on('update-downloaded', () => {
   notifier.notify(
     {
-      title: 'ITAM Version 2.0.32 Released. Click to Restart Application.', //put version number of future release. not current.
-      message: 'Changelog:\nFind My Files Feature Added.\nCopy My Files Feature Added.',
+      title: 'ITAM Version 2.0.43 Released. Click to Restart Application.', //put version number of future release. not current.
+      message: 'ITAM will be Updated on Application Restart.',
       icon: path.join(app.getAppPath(), '/images/ePrompto.ico'),
       sound: true,
       wait: true, 
@@ -2743,7 +2741,7 @@ ipcMain.on('checkfmfselected',function(e,form_data){
     if (err) {
        console.log("No connection");
     } else {
-      // console.log("fmf reached");
+      console.log("fmf reached");
       session.defaultSession.cookies.get({ url: 'http://www.eprompto.com' })
       .then((cookies) => {
         if(cookies.length > 0){
@@ -2755,7 +2753,7 @@ ipcMain.on('checkfmfselected',function(e,form_data){
           request.on('response', (response) => {
               
               response.on('data', (chunk) => {
-                // console.log(`${chunk}`)                //comment out
+                console.log(`${chunk}`)                //comment out
                 var obj = JSON.parse(chunk);
                 if(obj.status == 'valid'){
                   var asset_id = obj.result.asset_id;
@@ -3092,4 +3090,872 @@ ipcMain.on('check_copy_my_files_request2',function(e,form_data) {
   });
 };
 });});
+
+// Preventive Maintenance -> Simple    
+ipcMain.on('Preventive_Maintenance_Main',function(e,form_data,pm_type) {
+  console.log("Preventive Maintenance Type: "+pm_type);
+  // fs.mkdir("C:/ITAMEssential/Preventive_Maintenance", function(err) {
+  //   if (err) {
+  //     console.log(err)
+  //     console.log("Could not create Preventive Maintenance Folder")
+  //   } else { // output csv files only get written in pre-existing folders
+
+  console.log('inside Preventive_Maintenance_Main function');
+  
+    require('dns').resolve('www.google.com', function(err) {
+      if (err) {
+          console.log("No connection");
+      } else {
+        session.defaultSession.cookies.get({ url: 'http://www.eprompto.com' })
+        .then((cookies) => {
+        if(cookies.length > 0){
+          var body = JSON.stringify({ "funcType": 'getPreventiveMaintenanceList',"sys_key": cookies[0].name,"maintenance_type":pm_type }); 
+          const request = net.request({ 
+              method: 'POST', 
+              url: root_url+'/preventive_maintenance.php' 
+          }); 
+        request.on('response', (response) => {
+            
+            response.on('data', (chunk) => {
+              console.log(`${chunk}`);         // comment out
+              var obj = JSON.parse(chunk);
+              if(obj.status == 'valid'){
+                
+                if (obj.result.script_type == 'Simple'){
+                  global.stdoutputArray = [];
+
+                  if (chunk.includes(obj.result.process_name))
+                  {
+                    exec(obj.result.script_path, function(error, stdout, stderr) // works properly
+                      {      
+                        const output_data = [];
+                        output_data['activity_id']  = obj.result.activity_id;
+                        output_data['asset_id']     = obj.result.asset_id;
+                        output_data['script_id']    = obj.result.script_id;
+                        output_data['login_user']   = obj.result.login_user;
+                        output_data['maintenance_id'] = obj.result.maintenance_id;
+                        
+                        if (error) {
+                          console.log("error");
+                          output_data['script_status'] = 'Failed';
+                          output_data['script_remark'] = 'Failed to perform Maintainance Activity on this device.';
+                          output_data['result_data']   = error; 
+                          updatePreventiveMaintenance(output_data);
+                          return;
+                        };
+
+                        global.stdoutputArray.push(stdout);
+
+                        output_data['script_status'] = 'Completed';
+                        output_data['script_remark'] = 'Maintainance Activity Performed Successfully on this device';
+                        output_data['result_data']   = global.stdoutputArray; 
+                        updatePreventiveMaintenance(output_data);
+                      });
+
+                      // console.log(global.stdoutputArray);
+                      // UnArray = global.stdoutputArray[0];
+                      // console.log(UnArray);
+                      // console.log(stdoutputArray);
+                      // updatePreventiveMaintenance(global.stdoutputArray); // stdoutputArray has all the outputs. They'll be sent to Send_PM_StdOutput to be uploaded
+
+
+                  }
+                }
+                
+                const output_data = [];
+                output_data['activity_id'] = obj.result.activity_id;
+                output_data['asset_id']    = obj.result.asset_id;
+                output_data['script_id']   = obj.result.script_id
+                output_data['maintenance_id'] = obj.result.maintenance_id;
+                output_data['login_user']   = obj.result.login_user;
+                output_data['script_status'] = "Completed";
+                output_data['script_remark'] = 'Maintainance Activity Performed Successfully on this device';
+                
+
+                // Complex Bat Scripts
+                if (chunk.includes("PM_Browser_Cache"))
+                {                                              
+                  Preventive_Maintenance_Complex_Scripts('PM_Browser_Cache', output_data);
+                }
+
+                if (chunk.includes('Windows Cache'))
+                {                            
+                  Preventive_Maintenance_Complex_Scripts('Windows Cache', output_data);          
+                }
+
+                if (chunk.includes('Bit Locker'))
+                {                            
+                  Preventive_Maintenance_Complex_Scripts('Bit Locker', output_data);
+                }
+                
+                if (chunk.includes('Force Change Password'))
+                {                            
+                  Preventive_Maintenance_Complex_Scripts('Force Change Password', output_data);
+                }
+
+                if (chunk.includes('Enable Password Expiry'))
+                {                            
+                  Preventive_Maintenance_Complex_Scripts('Enable Password Expiry', output_data);
+                }
+
+                if (chunk.includes('Disable Password Expiry'))
+                {                            
+                  Preventive_Maintenance_Complex_Scripts('Disable Password Expiry', output_data);
+                }
+
+                if (chunk.includes('Enable USB Ports'))
+                {                            
+                  Preventive_Maintenance_Powershell_Scripts('Enable USB Ports', output_data);
+                }
+
+                if (chunk.includes('Disable USB Ports'))
+                {                            
+                  Preventive_Maintenance_Powershell_Scripts('Disable USB Ports', output_data);
+                }
+
+
+                // Powershell Scripts:
+                if (chunk.includes('Security Log'))
+                {                            
+                  Preventive_Maintenance_Powershell_Scripts('Security Log', output_data);                                
+                }
+
+                
+                if (chunk.includes('Antivirus Details'))
+                {                            
+                  Preventive_Maintenance_Powershell_Scripts('Antivirus Details', output_data);                             
+                }                                
+
+              }
+            })
+            response.on('end', () => {});
+        })
+        request.on('error', (error) => { 
+            console.log(`ERROR: ${(error)}`);
+        })
+        request.setHeader('Content-Type', 'application/json'); 
+        request.write(body, 'utf-8'); 
+        request.end();
+      }
+    });
+    };
+    });
+  // }});
+})
+
+//Function to update remark, response of bat file and status based on bat file run or not.
+function updatePreventiveMaintenance(output){
+  console.log("Inside updatePreventiveMaintenance function");
+  var body = JSON.stringify({ "funcType": 'updateActivity',
+                               "result_data" : output['result_data'],
+                               "asset_id" : output['asset_id'],
+                               "script_id" : output['script_id'],
+                               "login_user" : output['login_user'],
+                               "maintenance_id" : output['maintenance_id'],
+                               "activity_id" : output['activity_id'],
+                               "script_status" : output['script_status'],
+                               "script_remark" : output['script_remark']
+                            }); 
+
+  const request = net.request({ 
+      method: 'POST', 
+      url: root_url+'/preventive_maintenance.php' 
+  }); 
+  request.on('response', (response) => {
+      // console.log(response);
+      //console.log(`STATUS: ${response.statusCode}`)
+      response.on('data', (chunk) => {
+        // console.log(chunk);
+        console.log(chunk.toString('utf8'));
+        // arr.push(...chunk.toString('utf8'));
+        // console.log(arr);
+      })
+      response.on('end', () => {
+        
+        global.stdoutputArray = []; // To stop previous result from getting used
+
+      });
+  })
+  request.on('error', (error) => { 
+      log.info('Error while updating PM outputs '+`${(error)}`) 
+  })
+  request.setHeader('Content-Type', 'application/json'); 
+  request.write(body, 'utf-8'); 
+  request.end();
+
+};
+
+
+function Preventive_Maintenance_Complex_Scripts(Process_Name,output_res=[]){    
+  if (Process_Name == 'PM_Browser_Cache') {    
+  content1 = "@echo off"+'\n'+
+  "set LOGFILE=C:\\ITAMEssential\\EventLogCSV\\Browser_Cache_Clear.csv"+'\n'+
+  "call :LOG > %LOGFILE%"+'\n'+
+  "exit /B"+'\n'+
+  ":LOG"+'\n'+
+  "set ChromeDir=C:\\Users\\%USERNAME%\\AppData\\Local\\Google\\Chrome\\User Data"+'\n'+  
+  "del /q /s /f \"%ChromeDir%\""+'\n'+
+  "rd /s /q \"%ChromeDir%\""+'\n'+    
+  "set DataDir=C:\\Users\\%USERNAME%\\AppData\\Local\\Mozilla\\Firefox\\Profiles"+'\n'+  
+  "del /q /s /f \"%DataDir%\""+'\n'+
+  "rd /s /q \"%DataDir%\""+'\n'+  
+  "for /d %%x in (C:\\Users\\%USERNAME%\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\*) do del /q /s /f %%x\\*sqlite"+'\n'+    
+  "set DataDir=C:\\Users\\%USERNAME%\\AppData\\Local\\Microsoft\\Intern~1"+'\n'+  
+  "del /q /s /f \"%DataDir%\""+'\n'+
+  "rd /s /q \"%DataDir%\""+'\n'+  
+  "set History=C:\\Users\\%USERNAME%\\AppData\\Local\\Microsoft\\Windows\\History"+'\n'+  
+  "del /q /s /f \"%History%\""+'\n'+
+  "rd /s /q \"%History%\""+'\n'+  
+  "set IETemp=C:\\Users\\%USERNAME%\\AppData\\Local\\Microsoft\\Windows\\Tempor~1"+'\n'+  
+  "del /q /s /f \"%IETemp%\""+'\n'+
+  "rd /s /q \"%IETemp%\""+'\n'+  
+  "set Cookies=C:\\Users\\%USERNAME%\\AppData\\Roaming\\Microsoft\\Windows\\Cookies"+'\n'+  
+  "del /q /s /f \"%Cookies%\""+'\n'+
+  "rd /s /q \"%Cookies%\""+'\n'+  
+  "C:\\bin\\regdelete.exe HKEY_CURRENT_USER \"Software\\Microsoft\\Internet Explorer\\TypedURLs\""  
+    //Creating the script:
+    const path1 = 'C:/ITAMEssential/Browser_Cache.bat';
+      fs.writeFile(path1, content1, function (err) { 
+        if (err){
+          output_res['script_status'] = 'Failed';
+          output_res['script_remark'] = 'Failed to perform Maintainance Activity on this device. Failed to write bat file.';
+          output_res['result_data']   = err;
+          updatePreventiveMaintenance(output_res);
+          throw err;
+        }else{
+          console.log('Browser_Cache.bat Created');          
+          // Execution part:
+          child = spawn("powershell.exe",["C:\\ITAMEssential\\Browser_Cache.bat"]);
+          child.on("exit",function(){
+            console.log("Browser Cache Script Executed");            
+            setTimeout(function(){
+              readPMCSV("Browser_Cache", output_res); // To upload CSV function
+            },20000);//20 secs
+          child.stdin.end(); //end input
+        });
+        } 
+      });
+  }
+  if (Process_Name == 'Windows Cache') {    
+  content2 = "@echo off"+'\n'+
+  "set LOGFILE=C:\\ITAMEssential\\EventLogCSV\\Windows_Cache_Clear.csv"+'\n'+
+  "call :LOG > %LOGFILE%"+'\n'+
+  "exit /B"+'\n'+
+  ":LOG"+'\n'+  
+  "del /s /f /q C:\\Windows\\Temp\\*.*"+'\n'+  
+  "del /s /f /q %USERPROFILE%\\appdata\\local\\temp\\*.*"
+    //Creating the script:
+    const path2 = 'C:/ITAMEssential/Windows_Cache.bat';
+      fs.writeFile(path2, content2, function (err) { 
+        if (err){
+          output_res['script_status'] = 'Failed';
+          output_res['script_remark'] = 'Failed to perform Maintainance Activity on this device. Failed to write bat file.';
+          output_res['result_data']   = err;
+          updatePreventiveMaintenance(output_res);
+          throw err;   
+        }else{
+          console.log('Windows_Cache.bat Created');          
+          // Execution part:
+          child = spawn("powershell.exe",["C:\\ITAMEssential\\Windows_Cache.bat"]);
+          child.on("exit",function(){
+            console.log("Windows Cache Script Executed");                        
+            setTimeout(function(){
+              readPMCSV("Windows_Cache", output_res); // To upload CSV function
+            },20000);//20 secs
+          child.stdin.end(); //end input
+        });
+      }
+    });
+  }
+  if (Process_Name == 'Bit Locker') {
+    content3 = "@echo off"+'\n'+
+    ":: BatchGotAdmin"+'\n'+
+    ":-------------------------------------"+'\n'+
+    "REM  --> Check for permissions"+'\n'+
+    "    IF \"%PROCESSOR_ARCHITECTURE%\" EQU \"amd64\" ("+'\n'+
+    ">nul 2>&1 \"%SYSTEMROOT%\\SysWOW64\\cacls.exe\" \"%SYSTEMROOT%\\SysWOW64\\config\\system\""+'\n'+
+    ") ELSE ("+'\n'+
+    ">nul 2>&1 \"%SYSTEMROOT%\\system32\\cacls.exe\" \"%SYSTEMROOT%\\system32\\config\\system\""+'\n'+
+    ")"+'\n'+    
+    "REM --> If error flag set, we do not have admin."+'\n'+
+    "if '%errorlevel%' NEQ '0' ("+'\n'+
+    "    echo Requesting administrative privileges..."+'\n'+
+    "    goto UACPrompt"+'\n'+
+    ") else ( goto gotAdmin )"+'\n'+    
+    ":UACPrompt"+'\n'+
+    "    echo Set UAC = CreateObject^(\"Shell.Application\"^) > \"%temp%\\getadmin.vbs\""+'\n'+
+    "    set params= %*"+'\n'+
+    "    echo UAC.ShellExecute \"cmd.exe\", \"/c \"\"%~s0\"\" %params:\"=\"\"%\", \"\", \"runas\", 1 >> \"%temp%\\getadmin.vbs\""+'\n'+    
+    "    \"%temp%\\getadmin.vbs\""+'\n'+
+    "    del \"%temp%\\getadmin.vbs\""+'\n'+
+    "    exit /B"+'\n'+    
+    ":gotAdmin"+'\n'+
+    "    pushd \"%CD%\""+'\n'+
+    "    CD /D \"%~dp0\""+'\n'+
+    ":--------------------------------------"+'\n'+  
+    "set LOGFILE=C:\\ITAMEssential\\EventLogCSV\\Bitlocker.csv"+'\n'+
+    "call :LOG > %LOGFILE%"+'\n'+
+    "exit /B"+'\n'+
+    ":LOG"+'\n'+
+    "manage-bde -status"+'\n'+
+    "ECHO bitlocker bat executed"    
+    //Creating the script:
+    const path3 = 'C:/ITAMEssential/Bitlocker.bat';
+      fs.writeFile(path3, content3, function (err) { 
+        if (err){
+          output_res['script_status'] = 'Failed';
+          output_res['script_remark'] = 'Failed to perform Maintainance Activity on this device. Failed to write bat file.';
+          output_res['result_data']   = err;
+          updatePreventiveMaintenance(output_res);
+          throw err;
+        }else{
+          console.log('Bitlocker Bat File Created');          
+          // Execution part:
+          child = spawn("powershell.exe",["C:\\ITAMEssential\\Bitlocker.bat"]);
+          child.on("exit",function(){
+            console.log("Bitlocker Script Executed");
+            setTimeout(function(){
+              readPMCSV("Bitlocker", output_res); // To upload CSV function
+              console.log("Set timeout function triggered.")
+            },20000);//20 secs
+          child.stdin.end(); //end input
+        });
+        } 
+      });  
+  }
+  if (Process_Name == 'Force Change Password') {
+    content4 = "@echo off"+'\n'+
+    ":: BatchGotAdmin"+'\n'+
+    ":-------------------------------------"+'\n'+
+    "REM  --> Check for permissions"+'\n'+
+    "    IF \"%PROCESSOR_ARCHITECTURE%\" EQU \"amd64\" ("+'\n'+
+    ">nul 2>&1 \"%SYSTEMROOT%\\SysWOW64\\cacls.exe\" \"%SYSTEMROOT%\\SysWOW64\\config\\system\""+'\n'+
+    ") ELSE ("+'\n'+
+    ">nul 2>&1 \"%SYSTEMROOT%\\system32\\cacls.exe\" \"%SYSTEMROOT%\\system32\\config\\system\""+'\n'+
+    ")"+'\n'+
+    "REM --> If error flag set, we do not have admin."+'\n'+
+    "if '%errorlevel%' NEQ '0' ("+'\n'+
+    "    echo Requesting administrative privileges..."+'\n'+
+    "    goto UACPrompt"+'\n'+
+    ") else ( goto gotAdmin )"+'\n'+
+    ":UACPrompt"+'\n'+
+    "    echo Set UAC = CreateObject^(\"Shell.Application\"^) > \"%temp%\\getadmin.vbs\""+'\n'+
+    "    set params= %*"+'\n'+
+    "    echo UAC.ShellExecute \"cmd.exe\", \"/c \"\"%~s0\"\" %params:\"=\"\"%\", \"\", \"runas\", 1 >> \"%temp%\\getadmin.vbs\""+'\n'+
+    "    \"%temp%\\getadmin.vbs\""+'\n'+
+    "    del \"%temp%\\getadmin.vbs\""+'\n'+
+    "    exit /B"+'\n'+
+    ":gotAdmin"+'\n'+
+    "    pushd \"%CD%\""+'\n'+
+    "    CD /D \"%~dp0\""+'\n'+
+    ":--------------------------------------"+'\n'+
+    "set LOGFILE=C:\\ITAMEssential\\EventLogCSV\\logonpasswordchg.csv"+'\n'+
+    "call :LOG > %LOGFILE%"+'\n'+
+    "exit /B"+'\n'+
+    ":LOG"+'\n'+
+    "net  user %USERNAME%  /logonpasswordchg:yes"+'\n'+
+    "ECHO Force Change Password bat executed"
+    //Creating the script:
+    const path4 = 'C:/ITAMEssential/logonpasswordchg.bat';
+      fs.writeFile(path4, content4, function (err) { 
+        if (err){
+          output_res['script_status'] = 'Failed';
+          output_res['script_remark'] = 'Failed to perform Maintainance Activity on this device. Failed to write bat file.';
+          output_res['result_data']   = err;
+          updatePreventiveMaintenance(output_res);
+          throw err;
+        }else{
+          console.log('logonpasswordchg Bat File Created');
+          
+          // Execution part:
+          child = spawn("powershell.exe",["C:\\ITAMEssential\\logonpasswordchg.bat"]);
+          child.on("exit",function(){
+            console.log("logonpasswordchg Script Executed");
+            setTimeout(function(){
+              readPMCSV("logonpasswordchg", output_res); // To upload CSV function
+            },20000);//20 secs
+          child.stdin.end(); //end input
+        });
+        } 
+      });  
+  }
+  if (Process_Name == 'Enable Password Expiry') {    
+    content5 = "@echo off"+'\n'+
+    ":: BatchGotAdmin"+'\n'+
+    ":-------------------------------------"+'\n'+
+    "REM  --> Check for permissions"+'\n'+
+    "    IF \"%PROCESSOR_ARCHITECTURE%\" EQU \"amd64\" ("+'\n'+
+    ">nul 2>&1 \"%SYSTEMROOT%\\SysWOW64\\cacls.exe\" \"%SYSTEMROOT%\\SysWOW64\\config\\system\""+'\n'+
+    ") ELSE ("+'\n'+
+    ">nul 2>&1 \"%SYSTEMROOT%\\system32\\cacls.exe\" \"%SYSTEMROOT%\\system32\\config\\system\""+'\n'+
+    ")"+'\n'+
+    "REM --> If error flag set, we do not have admin."+'\n'+
+    "if '%errorlevel%' NEQ '0' ("+'\n'+
+    "    echo Requesting administrative privileges..."+'\n'+
+    "    goto UACPrompt"+'\n'+
+    ") else ( goto gotAdmin )"+'\n'+
+    ":UACPrompt"+'\n'+
+    "    echo Set UAC = CreateObject^(\"Shell.Application\"^) > \"%temp%\\getadmin.vbs\""+'\n'+
+    "    set params= %*"+'\n'+
+    "    echo UAC.ShellExecute \"cmd.exe\", \"/c \"\"%~s0\"\" %params:\"=\"\"%\", \"\", \"runas\", 1 >> \"%temp%\\getadmin.vbs\""+'\n'+
+    "    \"%temp%\\getadmin.vbs\""+'\n'+
+    "    del \"%temp%\\getadmin.vbs\""+'\n'+
+    "    exit /B"+'\n'+
+    ":gotAdmin"+'\n'+
+    "    pushd \"%CD%\""+'\n'+
+    "    CD /D \"%~dp0\""+'\n'+
+    ":--------------------------------------"+'\n'+
+    "set LOGFILE=C:\\ITAMEssential\\EventLogCSV\\EnablePasswordExpiry.csv"+'\n'+
+    "call :LOG > %LOGFILE%"+'\n'+
+    "exit /B"+'\n'+
+    ":LOG"+'\n'+
+    "wmic useraccount where name=\"%USERNAME%\" set passwordexpires=true"+'\n'+
+    "ECHO EnablePasswordExpiry bat executed"    
+    //Creating the script:
+    const path5 = 'C:/ITAMEssential/EnablePasswordExpiry.bat';
+      fs.writeFile(path5, content5, function (err) { 
+        if (err){
+          output_res['script_status'] = 'Failed';
+          output_res['script_remark'] = 'Failed to perform Maintainance Activity on this device. Failed to write bat file.';
+          output_res['result_data']   = err;
+          updatePreventiveMaintenance(output_res);
+          throw err;
+        }else{
+          console.log('EnablePasswordExpiry Bat File Created');          
+          // Execution part:
+          child = spawn("powershell.exe",["C:\\ITAMEssential\\EnablePasswordExpiry.bat"]);
+          child.on("exit",function(){
+            console.log("EnablePasswordExpiry Script Executed");
+            setTimeout(function(){
+              readPMCSV("EnablePasswordExpiry", output_res); 
+            },20000);//20 secs
+            // readPMCSV("EnablePasswordExpiry", output_res); // To upload CSV function
+          child.stdin.end(); //end input
+        });
+        }
+      });
+  }
+  if (Process_Name == 'Disable Password Expiry') {
+    content5 = "@echo off"+'\n'+
+    ":: BatchGotAdmin"+'\n'+
+    ":-------------------------------------"+'\n'+
+    "REM  --> Check for permissions"+'\n'+
+    "    IF \"%PROCESSOR_ARCHITECTURE%\" EQU \"amd64\" ("+'\n'+
+    ">nul 2>&1 \"%SYSTEMROOT%\\SysWOW64\\cacls.exe\" \"%SYSTEMROOT%\\SysWOW64\\config\\system\""+'\n'+
+    ") ELSE ("+'\n'+
+    ">nul 2>&1 \"%SYSTEMROOT%\\system32\\cacls.exe\" \"%SYSTEMROOT%\\system32\\config\\system\""+'\n'+
+    ")"+'\n'+
+    "REM --> If error flag set, we do not have admin."+'\n'+
+    "if '%errorlevel%' NEQ '0' ("+'\n'+
+    "    echo Requesting administrative privileges..."+'\n'+
+    "    goto UACPrompt"+'\n'+
+    ") else ( goto gotAdmin )"+'\n'+
+    ":UACPrompt"+'\n'+
+    "    echo Set UAC = CreateObject^(\"Shell.Application\"^) > \"%temp%\\getadmin.vbs\""+'\n'+
+    "    set params= %*"+'\n'+
+    "    echo UAC.ShellExecute \"cmd.exe\", \"/c \"\"%~s0\"\" %params:\"=\"\"%\", \"\", \"runas\", 1 >> \"%temp%\\getadmin.vbs\""+'\n'+
+    "    \"%temp%\\getadmin.vbs\""+'\n'+
+    "    del \"%temp%\\getadmin.vbs\""+'\n'+
+    "    exit /B"+'\n'+
+    ":gotAdmin"+'\n'+
+    "    pushd \"%CD%\""+'\n'+
+    "    CD /D \"%~dp0\""+'\n'+
+    ":--------------------------------------"+'\n'+
+    "set LOGFILE=C:\\ITAMEssential\\EventLogCSV\\DisablePasswordExpiry.csv"+'\n'+
+    "call :LOG > %LOGFILE%"+'\n'+
+    "exit /B"+'\n'+
+    ":LOG"+'\n'+
+    "wmic useraccount where name=\"%USERNAME%\" set passwordexpires=false"+'\n'+
+    "ECHO DisablePasswordExpiry bat executed"    
+    //Creating the script:
+    const path5 = 'C:/ITAMEssential/DisablePasswordExpiry.bat';
+      fs.writeFile(path5, content5, function (err) { 
+        if (err){
+          output_res['script_status'] = 'Failed';
+          output_res['script_remark'] = 'Failed to perform Maintainance Activity on this device. Failed to write bat file.';
+          output_res['result_data']   = err;
+          updatePreventiveMaintenance(output_res);
+          throw err;
+        }else{
+          console.log('DisablePasswordExpiry Bat File Created');          
+          // Execution part:
+          child = spawn("powershell.exe",["C:\\ITAMEssential\\DisablePasswordExpiry.bat"]);
+          child.on("exit",function(){
+            console.log("DisablePasswordExpiry Script Executed");
+            setTimeout(function(){
+              readPMCSV("DisablePasswordExpiry", output_res); // To upload CSV function
+            },20000);//20 secs
+          child.stdin.end(); //end input
+        });
+        } 
+      });  
+  }
+}
+
+
+function Preventive_Maintenance_Powershell_Scripts(Process_Name,output_res=[]){
+  
+  const path4 = 'C:/ITAMEssential/PM_execSecurity.bat';
+  const path5 = 'C:/ITAMEssential/PM_execAntivirus.bat';
+
+  const path8 = 'C:/ITAMEssential/EnableUSBPorts.bat';
+  const path9 = 'C:/ITAMEssential/DisableUSBPorts.bat';
+
+  if(Process_Name == 'Security Log'){
+
+    // BATCH FILE FOR BYPASSING EXECUTION POLICY:                
+    fs.writeFile(path4, '@echo off'+'\n'+'START /MIN c:\\windows\\system32\\WindowsPowerShell\\v1.0\\powershell.exe -WindowStyle Hidden -executionpolicy bypass C:\\ITAMEssential\\PM_Security.ps1', function (err) {
+      if (err) throw err;
+      console.log('Security Bypass Bat is created successfully.');
+    });
+
+    content3 = "if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {"+'\n'+
+    "Start-Process PowerShell -Verb RunAs \"-NoProfile -ExecutionPolicy Bypass -Command `\"cd '$pwd'; & '$PSCommandPath';`\"\";"+'\n'+
+    "exit;"+'\n'+
+    "}"+'\n'+
+    "Get-EventLog -LogName security | Select TimeGenerated,InstanceID,Message -First 10 | Out-File -Encoding ASCII -FilePath C:\\ITAMEssential\\EventLogCSV\\PM_Security.csv"
+
+    // Powershell Script File Creation and Bat Execution for Security and Antivirus:  
+    const path6 = 'C:/ITAMEssential/PM_Security.ps1';
+      fs.writeFile(path6, content3, function (err) { 
+        if (err){
+          output_res['script_status'] = 'Failed';
+          output_res['script_remark'] = 'Failed to perform Maintainance Activity on this device. Failed to write bat file.';
+          output_res['result_data']   = err;
+          updatePreventiveMaintenance(output_res);
+          throw err;
+        }else{
+          console.log('Security Powershell Script File Created');
+          
+          // Execute bat file part:
+          child = spawn("powershell.exe",["C:\\ITAMEssential\\PM_execSecurity.bat"]);
+          child.on("exit",function(){console.log("Security bat executed");
+          setTimeout(function(){
+            readPMCSV("Security_Log", output_res); // To upload CSV function
+            },20000);//20 secs
+          child.stdin.end(); //end input
+        });
+        } 
+      });    
+  }
+
+  if(Process_Name == 'Antivirus Details'){    
+    
+    // BATCH FILES FOR BYPASSING EXECUTION POLICY:    
+    fs.writeFile(path5, '@echo off'+'\n'+'START /MIN c:\\windows\\system32\\WindowsPowerShell\\v1.0\\powershell.exe -WindowStyle Hidden -executionpolicy bypass C:\\ITAMEssential\\PM_Antivirus.ps1', function (err) {
+      if (err) throw err;
+      console.log('Antivirus Bypass Bat is created successfully.');
+    });
+
+    
+    // Powershell Script content for Security and Antivirus:
+    // content4 = "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | Export-Csv -Path C:\\ITAMEssential\\EventLogCSV\\PM_Antivirus_Details.csv"
+  
+    content4 = "wmic /namespace:\\root\SecurityCenter2 path AntiVirusProduct get * /value | ? {$_.trim() -ne \"\" } |  Set-Content -Path C:\\ITAMEssential\\EventLogCSV\\PM_Antivirus_Details.csv"
+  
+    // Powershell Script File Creation and Bat Execution for Security and Antivirus:
+    const path7 = 'C:/ITAMEssential/PM_Antivirus.ps1';
+      fs.writeFile(path7, content4, function (err) { 
+        if (err){
+          output_res['script_status'] = 'Failed';
+          output_res['script_remark'] = 'Failed to perform Maintainance Activity on this device. Failed to write bat file.';
+          output_res['result_data']   = err;
+          updatePreventiveMaintenance(output_res);
+          throw err;
+        }else{
+          console.log('Antivirus Powershell Script File Created');
+          
+          // Execute bat file part:
+          child = spawn("powershell.exe",["C:\\ITAMEssential\\PM_execAntivirus.bat"]);
+          child.on("exit",function(){console.log("Antivirus bat executed");
+          setTimeout(function(){
+            readPMCSV("Antivirus_Details", output_res); // To upload CSV function
+            },20000);//20 secs
+          child.stdin.end(); //end input
+        });
+        }
+      });
+  }
+
+  if(Process_Name == 'Disable USB Ports'){
+
+    
+    // BATCH FILES FOR BYPASSING EXECUTION POLICY:    
+    fs.writeFile(path9, '@echo off'+'\n'+'START /MIN c:\\windows\\system32\\WindowsPowerShell\\v1.0\\powershell.exe -WindowStyle Hidden -executionpolicy bypass C:\\ITAMEssential\\DisableUSBPorts.ps1', function (err) {
+      if (err) throw err;
+      console.log('Antivirus Bypass Bat is created successfully.');
+    });
+
+
+    content5 =  "if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {"+'\n'+
+    "Start-Process PowerShell -Verb RunAs \"-NoProfile -ExecutionPolicy Bypass -Command `\"cd '$pwd'; & '$PSCommandPath';`\"\";"+'\n'+
+    "exit;"+'\n'+
+    "}"+'\n'+
+    "REG ADD HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\USBSTOR /v Start /t REG_DWORD /d 4 /f | Out-File -FilePath C:\\ITAMEssential\\EventLogCSV\\DisableUSBPorts.csv"
+
+
+    // Powershell Script File Creation and Execution for DisableUSBPorts:
+    const path10 = 'C:/ITAMEssential/DisableUSBPorts.ps1';
+      fs.writeFile(path10, content5, function (err) { 
+        if (err){
+          output_res['script_status'] = 'Failed';
+          output_res['script_remark'] = 'Failed to perform Maintainance Activity on this device. Failed to write bat file.';
+          output_res['result_data']   = err;
+          updatePreventiveMaintenance(output_res);
+          throw err;
+        }else{
+          console.log('DisableUSBPorts Powershell Script File Created');
+          
+          // Execute bat file part:
+          child = spawn("powershell.exe",["C:\\ITAMEssential\\DisableUSBPorts.bat"]);
+          child.on("exit",function(){console.log("DisableUSBPorts ps1 executed");          
+          setTimeout(function(){
+            readPMCSV("DisableUSBPorts", output_res); // To upload CSV function
+            },20000);//20 secs
+          child.stdin.end(); //end input
+        });
+        }
+      });
+  }
+  if(Process_Name == 'Enable USB Ports'){
+
+    
+    // BATCH FILES FOR BYPASSING EXECUTION POLICY:    
+    fs.writeFile(path8, '@echo off'+'\n'+'START /MIN c:\\windows\\system32\\WindowsPowerShell\\v1.0\\powershell.exe -WindowStyle Hidden -executionpolicy bypass C:\\ITAMEssential\\EnableUSBPorts.ps1', function (err) {
+      if (err) throw err;
+      console.log('Antivirus Bypass Bat is created successfully.');
+    });
+
+
+    content6 =  "if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {"+'\n'+
+    "Start-Process PowerShell -Verb RunAs \"-NoProfile -ExecutionPolicy Bypass -Command `\"cd '$pwd'; & '$PSCommandPath';`\"\";"+'\n'+
+    "exit;"+'\n'+
+    "}"+'\n'+
+    "REG ADD HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\USBSTOR /v Start /t REG_DWORD /d 3 /f | Out-File -FilePath C:\\ITAMEssential\\EventLogCSV\\EnableUSBPorts.csv"
+
+
+    // Powershell Script File Creation and Execution for EnableUSBPorts:
+    const path11 = 'C:/ITAMEssential/EnableUSBPorts.ps1';
+      fs.writeFile(path11, content6, function (err) { 
+        if (err){
+          output_res['script_status'] = 'Failed';
+          output_res['script_remark'] = 'Failed to perform Maintainance Activity on this device. Failed to write bat file.';
+          output_res['result_data']   = err;
+          updatePreventiveMaintenance(output_res);
+          throw err;
+        }else{
+          console.log('EnableUSBPorts Powershell Script File Created');
+          
+          // Execute bat file part:
+          child = spawn("powershell.exe",["C:\\ITAMEssential\\EnableUSBPorts.bat"]);
+          child.on("exit",function(){console.log("EnableUSBPorts ps1 executed");          
+          setTimeout(function(){
+            readPMCSV("EnableUSBPorts", output_res); // To upload CSV function
+            },20000);//20 secs
+          child.stdin.end(); //end input
+        });
+        }
+      });
+    }
+}
+
+
+function readPMCSV(CSV_name,output_res=[]){
+  
+  console.log(CSV_name);
+  console.log('inside readPMCSV function');
+
+  var filepath1 = 'C:\\ITAMEssential\\EventLogCSV\\PM_Security.csv';
+  var filepath2 = 'C:\\ITAMEssential\\EventLogCSV\\PM_Antivirus_Details.csv';
+  var filepath3 = 'C:\\ITAMEssential\\EventLogCSV\\Browser_Cache_Clear.csv';
+  var filepath4 = 'C:\\ITAMEssential\\EventLogCSV\\Windows_Cache_Clear.csv';
+  var filepath5 = 'C:\\ITAMEssential\\EventLogCSV\\Bitlocker.csv';
+  var filepath6 = 'C:\\ITAMEssential\\EventLogCSV\\logonpasswordchg.csv';
+  var filepath7 = 'C:\\ITAMEssential\\EventLogCSV\\EnablePasswordExpiry.csv';
+  var filepath8 = 'C:\\ITAMEssential\\EventLogCSV\\DisablePasswordExpiry.csv';
+  var filepath9 = 'C:\\ITAMEssential\\EventLogCSV\\EnableUSBPorts.csv';
+  var filepath10 = 'C:\\ITAMEssential\\EventLogCSV\\DisableUSBPorts.csv';
+
+  // filepath1 for Security
+  // filepath2 for Antivirus
+
+
+  // see readSecurityCSVFile
+  if (CSV_name == "Security_Log-Old"){ 
+    if (fs.existsSync(filepath1)) {
+    var final_arr=[];
+    var new_Arr = [];
+    var ultimate = [];
+    const converter=csv()
+      .fromFile(filepath1)
+      .then((json)=>{
+          if(json != []){
+            for (j = 0; j < json.length; j++) {
+                new_Arr = [json[j]['EventID'],json[j]['MachineName'],json[j]['Data'],json[j]['Index'],json[j]['Category'],json[j]['CategoryNumber'],json[j]['EntryType'],json[j]['Message'],json[j]['Source'],json[j]['ReplacementStrings'],json[j]['InstanceId'],json[j]['TimeGenerated'],json[j]['TimeWritten']];
+                ultimate.push(new_Arr);
+            }
+              console.log(ultimate);
+              require('dns').resolve('www.google.com', function(err) {
+                if (err) {
+                  console.log("No connection");
+                } else {
+                    var body = JSON.stringify({ "funcType": 'PM_Security_Log_CSV', "output": ultimate }); 
+                    const request = net.request({ 
+                        method: 'POST', 
+                        url: root_url+'/preventive_maintenance.php' 
+                    }); 
+                    request.on('response', (response) => {
+                        console.log(`STATUS: ${response.statusCode}`)
+                        response.on('data', (chunk) => {
+                          console.log(`${chunk}`);
+                        })
+                        response.on('end', () => {})
+                    })
+                    request.on('error', (error) => { 
+                        console.log(`ERROR: ${(error)}`) 
+                    })
+                    request.setHeader('Content-Type', 'application/json'); 
+                    request.write(body, 'utf-8'); 
+                    request.end();
+                }
+              }); 
+          }
+      })
+    }else{console.log("No CSV found at path "+filepath1);
+        output_res['script_status'] = 'Failed';
+        output_res['script_remark'] = 'Failed to perform Maintainance Activity on this device.';
+        output_res['result_data']   = null; 
+        updatePreventiveMaintenance(output_res);};
+  // if(CSV_name == "Antivirus_Details"){  
+  //   if (fs.existsSync(filepath2)) {
+  //     var final_arr=[];
+  //     var new_Arr = [];
+  //     var ultimate = [];
+  //     const converter=csv()
+  //     .fromFile(filepath2)
+  //     .then((json)=>{
+  //         if(json != []){
+  //             console.log(json);
+  //             for (j = 0; j < json.length; j++) {              						
+  //               new_Arr = [json[j]['displayName'],json[j]['instanceGuid'],json[j]['pathToSignedProductExe'],json[j]['pathToSignedReportingExe'],json[j]['productState'],json[j]['timestamp'],json[j]['PSComputerName']];
+  //               // ultimate.push(new_Arr);
+  //             }
+  //             require('dns').resolve('www.google.com', function(err) {
+  //               if (err) {
+  //                   console.log("No connection");
+  //               } else {
+  //                 var body = JSON.stringify({ "funcType": 'updateActivity',
+  //                                             "result_data" : new_Arr,
+  //                                             "asset_id" : output_res['asset_id'],
+  //                                             "script_id" : output_res['script_id'],
+  //                                             "login_user" : output_res['login_user'],
+  //                                             "maintenance_id" : output_res['maintenance_id'],
+  //                                             "activity_id" : output_res['activity_id'],
+  //                                             "script_status" : output_res['script_status'],
+  //                                             "script_remark" : output_res['script_remark']
+  //                                         });
+  //                   const request = net.request({ 
+  //                       method: 'POST', 
+  //                       url: root_url+'/preventive_maintenance.php' 
+  //                   }); 
+  //                   request.on('response', (response) => {
+  //                       console.log(`STATUS: ${response.statusCode}`)
+  //                       response.on('data', (chunk) => {
+  //                         console.log(`${chunk}`);
+  //                       })
+  //                       response.on('end', () => {})
+  //                   })
+  //                   request.on('error', (error) => { 
+  //                       console.log(`ERROR: ${(error)}`) 
+  //                   })
+  //                   request.setHeader('Content-Type', 'application/json'); 
+  //                   request.write(body, 'utf-8'); 
+  //                   request.end();
+  //               }
+  //             }); 
+  //         }
+  //     })
+  //   }else{
+  //     console.log("No CSV found at path "+filepath2);
+  //     output_res['script_status'] = 'Failed';
+  //     output_res['script_remark'] = 'Failed to perform Maintainance Activity on this device.';
+  //     output_res['result_data']   = null; 
+  //     updatePreventiveMaintenance(output_res);
+  //   };
+  }else if(CSV_name == "Security_Log" || CSV_name == "Windows_Cache" || CSV_name == "Browser_Cache" || CSV_name == 'Antivirus_Details' || CSV_name == "Bitlocker" || CSV_name == "logonpasswordchg"  || CSV_name == "EnablePasswordExpiry"  || CSV_name == "DisablePasswordExpiry"  || CSV_name == "EnableUSBPorts"  || CSV_name == "DisableUSBPorts" ){
+    
+    newFilePath = ( CSV_name == 'Security_Log') ? filepath1 : ( CSV_name == 'Windows_Cache') ? filepath4 : ( CSV_name == 'Browser_Cache') ? filepath3 : ( CSV_name == 'Antivirus_Details') ? filepath2 : ( CSV_name == 'logonpasswordchg') ? filepath6 : ( CSV_name == 'EnablePasswordExpiry') ? filepath7 : ( CSV_name == 'DisablePasswordExpiry') ? filepath8 : ( CSV_name == 'EnableUSBPorts') ? filepath9 : ( CSV_name == 'DisableUSBPorts') ? filepath10 : filepath5; // filepath5 is Bitlocker
+    
+    if (fs.existsSync(newFilePath)) {
+      var final_arr=[];
+      var new_Arr = [];
+      var ultimate = [];
+      const converter=csv({noheader: true,output:"line"})
+      .fromFile(newFilePath)
+      .then((json)=>{
+          if(json != []){ 
+            if(CSV_name == "EnablePasswordExpiry"  || CSV_name == "DisablePasswordExpiry" || CSV_name == "Windows_Cache" || CSV_name == "Browser_Cache" || CSV_name == "logonpasswordchg" || CSV_name == "EnableUSBPorts" || CSV_name == "DisableUSBPorts" ){
+              new_Arr = 'Property(s) update successful';              
+              ultimate.push(new_Arr);
+              json = ultimate;
+            }
+              //  console.log(output_res);
+              console.log(json);
+              require('dns').resolve('www.google.com', function(err) {
+                if (err) {
+                    console.log("No connection");
+                } else {
+                    console.log(output_res); // comment out
+                    var body = JSON.stringify({ "funcType": 'updateActivity',
+                                              "result_data" : json,
+                                              "asset_id" : output_res['asset_id'],
+                                              "script_id" : output_res['script_id'],
+                                              "login_user" : output_res['login_user'],
+                                              "maintenance_id" : output_res['maintenance_id'],
+                                              "activity_id" : output_res['activity_id'],
+                                              "script_status" : output_res['script_status'],
+                                              "script_remark" : output_res['script_remark']
+                                          });
+                    const request = net.request({ 
+                        method: 'POST', 
+                        url: root_url+'/preventive_maintenance.php' 
+                    }); 
+                    request.on('response', (response) => {
+                        console.log(`STATUS: ${response.statusCode}`)
+                        response.on('data', (chunk) => {
+                          console.log(`${chunk}`);                          
+                            console.log(chunk.toString('utf8'));
+                        })
+                        response.on('end', () => {
+                          if (newFilePath != "" ){ // if filepath has been passed and uploading done
+                            fs.unlinkSync(newFilePath); // This deletes the created csv
+                            console.log("File Unlinked");
+                          }
+                        })
+                    })
+                    request.on('error', (error) => { 
+                        console.log(`ERROR: ${(error)}`) 
+                    })
+                    request.setHeader('Content-Type', 'application/json'); 
+                    request.write(body, 'utf-8'); 
+                    request.end();
+                }
+              }); 
+          }
+      })
+    }else{
+      console.log("No CSV found at path "+newFilePath);
+
+      output_res['script_status'] = 'Failed';
+      output_res['script_remark'] = 'Failed to perform Maintainance Activity on this device.';
+      output_res['result_data']   = null; 
+      updatePreventiveMaintenance(output_res);
+    }; // update for: if permission not given in time or no output found at output location
+  }else{
+    console.log("CSV_name incorrect"); 
+  }
+}
+
+
+
 
