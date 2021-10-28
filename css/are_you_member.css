@@ -29,6 +29,15 @@ font-weight: 400;
  color: #000864;
 }
 
+.transform-master {
+  box-shadow: inset 0px 0px 1px 1px #0000002e;
+  border-radius: 16px;
+  overflow: hidden;
+  background: white;
+  height: 100%;
+}
+
+
 .main-block {
 display: flex;
 width: 90%;
@@ -70,7 +79,7 @@ flex-direction: column;
 input, select {
 padding: 15px;
 margin-bottom: 15px;
-margin-top: 20px
+margin-top: 20px;
 background: transparent;
 border: none;
 border-bottom: 1px solid #000864;
@@ -234,6 +243,8 @@ height: 100%;
     background-color: #000864;
     /*margin-top: 5%;*/
     color: white;
+    border-bottom-right-radius: 16px;
+    border-bottom-left-radius: 16px;
 }
 .img-margin-ticket{
   margin-left: 14px !important;
